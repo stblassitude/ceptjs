@@ -1,7 +1,7 @@
 (function() {
 
   class CeptAttr {
-    constructor() {
+    constructor(attr) {
       this.bg = Cept.COLOR_TRANSPARENT;
       this.fg = Cept.COLOR_WHITE;
       this.flashf = 0;
@@ -10,6 +10,8 @@
       this.flashr = false;
       this.inv = false;
       this.underline = false;
+      if (attr !== undefined)
+        Object.assign(this, attr);
     }
 
     equals(b) {
@@ -21,6 +23,43 @@
         && this.flashr == b.flashr
         && this.inv == b.inv
         && this.underline == b.underline;
+    }
+  }
+
+  class CeptScreenRow {
+    constructor(colsOrRow) {
+      if (colsOrRow instanceof CeptScreenRow) {
+        this.attr = [];
+        this.bg = colsOrRow.bg;
+        this.cols = colsOrRow.cols;
+        this.text = colsOrRow.text;
+        for (var x = 0; x < this.cols; x++) {
+          this.attr[x] = new CeptAttr(colsOrRow.attr[x]);
+        }
+      } else {
+        this.attr = [];
+        this.bg = Cept.COLOR_TRANSPARENT;
+        this.cols = colsOrRow;
+        this.text = "\u00A0".repeat(this.cols);
+        for (var x = 0; x < this.cols; x++) {
+          this.attr[x] = new CeptAttr();
+        }
+      }
+    }
+
+    equals(b) {
+      if (this.text != b.text
+        || this.bg != b.bg
+        || this.cols != b.cols
+        || this.attr.length != b.attr.length) {
+          return false;
+        }
+      for (var i=0; i < this.attr.length; i++) {
+        if (!this.attr[i].equals(b.attr[i])) {
+          return false;
+        }
+      }
+      return true;
     }
   }
 
@@ -58,19 +97,19 @@
 
       this.flashp = 0;
       window.setInterval(this._flashInterval.bind(this), 1000/6);
+      this.forcedUpdate = true;
 
       this.screen = {}
-      this.screen.screenbg = Cept.COLOR_BLACK;
+      this.screen.rows = []
+      this.screen.lastrows = []
+      this.screen.bg = Cept.COLOR_BLACK;
       this.screen.attr = [];
-      this.screen.rowbg = []
       this.screen.text = []
       for (var y = 0; y < this.rows; y++) {
         this.screen.text[y] = ".".repeat(this.cols);
         this.screen.attr[y] = [];
-        this.screen.rowbg[y] = Cept.COLOR_TRANSPARENT;
-        for (var x = 0; x < this.cols; x++) {
-          this.screen.attr[y][x] = new CeptAttr();
-        }
+        this.screen.rows[y] = new CeptScreenRow(this.cols);
+        this.screen.lastrows[y] = new CeptScreenRow(this.cols);
       }
 
       this.elements = {};
@@ -93,7 +132,7 @@
         this.elements.row[y] = document.createElement("div");
         this.elements.row[y].style.padding = "0 20px";
         this.elements.screen.appendChild(this.elements.row[y]);
-        this._updateRowFrom(y);
+        this._updateRow(y);
       }
 
       this.clear(10, 10, 20, 5);
@@ -109,17 +148,20 @@
     /**
      * We need to emulate the transparent foreground color by finding the first non-transparent color.
      */
-    _effectiveColor(c, y) {
+    _effectiveColor(c, row) {
       if (!this._isTransparent(c))
         return c;
-      if (!this._isTransparent(this.screen.rowbg[y]))
-        return this.screen.rowbg[y];
-      if (!this._isTransparent(this.screen.screenbg))
-        return this.screen.screenbg;
+      if (!this._isTransparent(row.bg))
+        return row.bg;
+      if (!this._isTransparent(this.screen.bg))
+        return this.screen.bg;
       return [0,0,0,1];
     }
 
-    _spanFor(attr, text, spans) {
+    /**
+     * Create a span element for the given attributes and text.
+     */
+    _spanForAttr(attr, text) {
       var s = document.createElement("span");
       s.style.backgroundColor = this._rgba_from_clut(attr.bg);
       s.style.color = this._rgba_from_clut(attr.fg);
@@ -127,46 +169,65 @@
         s.style.textDecoration = "underline";
       var t = document.createTextNode(text);
       s.appendChild(t);
+      return s;
       spans.push(s);
     }
 
-    _updateRowFrom(y) {
-      this.elements.row[y].style.backgroundColor = this._rgba_from_clut(this.screen.rowbg[y])
-      var attr = new CeptAttr();
-      var updated = new CeptAttr();
-      Object.assign(attr, this.screen.attr[y][0]);
+    /**
+     * Create a list of spans for the different formatting on a row. Returns
+     * the (potentially unchanged) row, and updates the spans array.
+     */
+    _createUpdatedRow(row, spans) {
+      var updatedRow = new CeptScreenRow(row);
+      var lastAttr = new CeptAttr(row.attr[0]);
+      var nextAttr = new CeptAttr();
       var text = "";
-      var spans = [];
       for (var x = 0; x < this.cols; x++) {
-        Object.assign(updated, this.screen.attr[y][x]);
-        if ((updated.flashf == 1 && (~~(this.flashp / 3) != updated.flashp ^ updated.flashi))
-            || (updated.flashf == 2 && (~~(this.flashp / 2) != updated.flashp) ^ updated.flashi)) {
-          if (updated.flashr) {
-            updated.fg = updated.fg ^ 8; // flash between palette 0/1 or 2/3, "reduced intensity flash"
-          } else {
-            updated.fg = updated.bg;
-          }
+        Object.assign(nextAttr, row.attr[x]);
+        if ((nextAttr.flashf == 1 && (~~(this.flashp / 3) != nextAttr.flashp ^ nextAttr.flashi))
+            || (nextAttr.flashf == 2 && (~~(this.flashp / 2) != nextAttr.flashp) ^ nextAttr.flashi)) {
+           // flash between palette 0/1 or 2/3, "reduced intensity flash"
+          nextAttr.fg = nextAttr.flashr ? nextAttr.fg ^ 8 : nextAttr.bg;
         }
-        if (updated.inv) {
-          var temp = updated.fg;
-          updated.fg = updated.bg;
-          updated.bg = temp;
+        if (nextAttr.inv) {
+          var temp = nextAttr.fg;
+          nextAttr.fg = nextAttr.bg;
+          nextAttr.bg = temp;
         }
-        updated.fg = this._effectiveColor(updated.fg, y);
+        nextAttr.fg = this._effectiveColor(nextAttr.fg, row);
+        Object.assign(updatedRow.attr[x], nextAttr);
         // if not the same as before, emit span and start a new one
-        if (!attr.equals(updated)) {
+        if (!lastAttr.equals(nextAttr)) {
           if (text != "") {
-            this._spanFor(attr, text, spans);
+            spans.push(this._spanForAttr(lastAttr, text));
           }
-          Object.assign(attr, updated);
+          Object.assign(lastAttr, nextAttr);
           text = "";
         }
-        text += this.screen.text[y].substr(x, 1);
+        text += row.text.substr(x, 1);
       }
-      this._spanFor(attr, text, spans);
-      this.elements.row[y].replaceChildren(...spans);
+      spans.push(this._spanForAttr(lastAttr, text));
+      return updatedRow;
     }
 
+    /**
+     * (Re-)Create the DOM for one row.
+     */
+    _updateRow(y) {
+      this.elements.row[y].style.backgroundColor = this._rgba_from_clut(this.screen.rows[y].bg)
+
+      var spans = [];
+      var updatedRow = this._createUpdatedRow(this.screen.rows[y], spans)
+      if (this.forcedUpdate || !this.screen.lastrows[y].equals(updatedRow)) {
+        // only if the new row differs from the last one replace the elements
+        this.elements.row[y].replaceChildren(...spans);
+        this.screen.lastrows[y] = updatedRow;
+      }
+    }
+
+    /**
+     * Return a CSS RGBA() definition for a color lookup table entry.
+     */
     _rgba_from_clut(i) {
       return "rgba(" + this.clut[i][0] + "," + this.clut[i][1] + "," + this.clut[i][2] + "," + this.clut[i][3] + ")";
     }
@@ -273,7 +334,7 @@
     }
 
     get screenColor() {
-      return this.screen.screenbg;
+      return this.screen.bg;
     }
 
     set screenColor(c) {
@@ -290,8 +351,8 @@
 
     setScreenColor(c) {
       if (c !== undefined)
-        this.screen.screenbg = c;
-      this.elements.screen.style.backgroundColor = this._rgba_from_clut(this.screen.screenbg);
+        this.screen.bg = c;
+      this.elements.screen.style.backgroundColor = this._rgba_from_clut(this.screen.bg);
     }
 
     clear(x0, y0, w, h) {
@@ -302,20 +363,23 @@
       var x1 = x0 + w;
       var y1 = y0 + h;
       for (var y = y0; y < y1; y++) {
-        this.screen.text[y] = this.screen.text[y].substr(0, x0)
+        this.screen.rows[y].text = this.screen.rows[y].text.substr(0, x0)
           + c.repeat(w)
-          + this.screen.text[y].substr(x1);
+          + this.screen.rows[y].text.substr(x1);
         for (var x = x0; x < x1; x++) {
-          this.screen.attr[y][x].bg = Cept.COLOR_TRANSPARENT;
+          this.screen.rows[y].attr[x].bg = Cept.COLOR_TRANSPARENT;
         }
-        this._updateRowFrom(y);
+        this._updateRow(y);
       }
     }
 
-    updateScreen() {
+    updateScreen(force) {
+      if (force)
+        this.forcedUpdate = true;
       for (var y = 0; y < this.rows; y++) {
-        this._updateRowFrom(y);
+        this._updateRow(y);
       }
+      this.forcedUpdate = false;
     }
 
     move(x, y) {
@@ -327,9 +391,9 @@
       for (var i = 0; i < t.length; i++) {
         var x = this.cursor.x;
         var y = this.cursor.y;
-        var r = this.screen.text[this.cursor.y];
-        this.screen.text[y] = r.substr(0, x) + t[i] + r.substr(x+1, this.cols-x);
-        Object.assign(this.screen.attr[y][x], this.attr);
+        var r = this.screen.rows[this.cursor.y].text;
+        this.screen.rows[y].text = r.substr(0, x) + t[i] + r.substr(x+1, this.cols-x);
+        Object.assign(this.screen.rows[y].attr[x], this.attr);
         x += 1;
         if (x >= this.cols) {
           x = 0;
@@ -344,7 +408,7 @@
 
     testPattern1() {
       for (var y = 0; y < this.rows; y++) {
-        this.screen.rowbg[y] = y % 32;
+        this.screen.rows[y].bg = y % 32;
         var t = ""
         for (var x = 0; x < this.cols; x++) {
           t += String.fromCharCode(64+x+y);
