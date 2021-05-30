@@ -9,16 +9,18 @@
       this.flashp = 0;
       this.flashr = false;
       this.inv = false;
+      this.underline = false;
     }
 
-    equal(b) {
+    equals(b) {
       return this.bg == b.bg
         && this.fg == b.fg
         && this.flashf == b.flashf
         && this.flashi == b.flashi
         && this.flashp == b.flashp
         && this.flashr == b.flashr
-        && this.inv == b.inv;
+        && this.inv == b.inv
+        && this.underline == b.underline;
     }
   }
 
@@ -49,9 +51,7 @@
       this.cols = 40;
 
       this.cursor = { x: 0, y: 0};
-      this.attr = {}
-      this.attr.fg = Cept.COLOR_WHITE;
-      this.attr.bg = Cept.COLOR_TRANSPARENT;
+      this.attr = new CeptAttr();
 
       this.clut = []
       this.resetClut();
@@ -70,13 +70,6 @@
         this.screen.rowbg[y] = Cept.COLOR_TRANSPARENT;
         for (var x = 0; x < this.cols; x++) {
           this.screen.attr[y][x] = new CeptAttr();
-          this.screen.attr[y][x].bg = Cept.COLOR_TRANSPARENT;
-          this.screen.attr[y][x].fg = Cept.COLOR_WHITE;
-          this.screen.attr[y][x].flashf = 0;
-          this.screen.attr[y][x].flashi = false;
-          this.screen.attr[y][x].flashp = 0;
-          this.screen.attr[y][x].flashr = false;
-          this.screen.attr[y][x].inv = false;
         }
       }
 
@@ -106,10 +99,32 @@
       this.clear(10, 10, 20, 5);
     }
 
-    _spanFor(bg, fg, text, spans) {
+    /**
+     * Only color index 8 is ever going to be transparent, and only if defined as black.
+     */
+    _isTransparent(c) {
+      return c === Cept.COLOR_TRANSPARENT && this._rgba_from_clut(c) == "rgba(0,0,0,0)";
+    }
+
+    /**
+     * We need to emulate the transparent foreground color by finding the first non-transparent color.
+     */
+    _effectiveColor(c, y) {
+      if (!this._isTransparent(c))
+        return c;
+      if (!this._isTransparent(this.screen.rowbg[y]))
+        return this.screen.rowbg[y];
+      if (!this._isTransparent(this.screen.screenbg))
+        return this.screen.screenbg;
+      return [0,0,0,1];
+    }
+
+    _spanFor(attr, text, spans) {
       var s = document.createElement("span");
-      s.style.backgroundColor = this._rgba_from_clut(bg);
-      s.style.color = this._rgba_from_clut(fg);
+      s.style.backgroundColor = this._rgba_from_clut(attr.bg);
+      s.style.color = this._rgba_from_clut(attr.fg);
+      if (attr.underline)
+        s.style.textDecoration = "underline";
       var t = document.createTextNode(text);
       s.appendChild(t);
       spans.push(s);
@@ -117,44 +132,43 @@
 
     _updateRowFrom(y) {
       this.elements.row[y].style.backgroundColor = this._rgba_from_clut(this.screen.rowbg[y])
-      var bg = this.screen.rowbg[y];
-      var fg = Cept.COLOR_WHITE;
+      var attr = new CeptAttr();
+      var updated = new CeptAttr();
+      Object.assign(attr, this.screen.attr[y][0]);
       var text = "";
       var spans = [];
       for (var x = 0; x < this.cols; x++) {
-        var attr = this.screen.attr[y][x];
-        var cbg = this.screen.attr[y][x].bg;
-        var cfg = this.screen.attr[y][x].fg;
-        var inv = this.screen.attr[y][x].inv;
-        if ((attr.flashf == 1 && (~~(this.flashp / 3) != attr.flashp ^ attr.flashi))
-            || (attr.flashf == 2 && (~~(this.flashp / 2) != attr.flashp) ^ attr.flashi)) {
-          if (attr.flashr) {
-            cfg = cfg ^ 8; // flash between palette 0/1 or 2/3, "reduced intensity flash"
+        Object.assign(updated, this.screen.attr[y][x]);
+        if ((updated.flashf == 1 && (~~(this.flashp / 3) != updated.flashp ^ updated.flashi))
+            || (updated.flashf == 2 && (~~(this.flashp / 2) != updated.flashp) ^ updated.flashi)) {
+          if (updated.flashr) {
+            updated.fg = updated.fg ^ 8; // flash between palette 0/1 or 2/3, "reduced intensity flash"
           } else {
-            cfg = cbg;
+            updated.fg = updated.bg;
           }
         }
-        if (inv) {
-          var temp = cfg;
-          cfg = cbg;
-          cbg = temp;
+        if (updated.inv) {
+          var temp = updated.fg;
+          updated.fg = updated.bg;
+          updated.bg = temp;
         }
-        if (cbg != bg || cfg != fg) {
+        updated.fg = this._effectiveColor(updated.fg, y);
+        // if not the same as before, emit span and start a new one
+        if (!attr.equals(updated)) {
           if (text != "") {
-            this._spanFor(bg, fg, text, spans);
+            this._spanFor(attr, text, spans);
           }
-          bg = cbg;
-          fg = cfg;
+          Object.assign(attr, updated);
           text = "";
         }
         text += this.screen.text[y].substr(x, 1);
       }
-      this._spanFor(bg, fg, text, spans);
+      this._spanFor(attr, text, spans);
       this.elements.row[y].replaceChildren(...spans);
     }
 
     _rgba_from_clut(i) {
-      return "rgba(" + this.clut[i][0] + ", " + this.clut[i][1] + ", " + this.clut[i][2] + ", " + this.clut[i][3] + ")";
+      return "rgba(" + this.clut[i][0] + "," + this.clut[i][1] + "," + this.clut[i][2] + "," + this.clut[i][3] + ")";
     }
 
     _flashInterval() {
@@ -250,12 +264,28 @@
       this.attr.flashp = p;
     }
 
+    get inverted() {
+      return this.attr.inv;
+    }
+
+    set inverted(i) {
+      this.attr.inv = i;
+    }
+
     get screenColor() {
       return this.screen.screenbg;
     }
 
     set screenColor(c) {
       setScreenColor(c)
+    }
+
+    get underlined() {
+      return this.attr.underline;
+    }
+
+    set underlined(u) {
+      this.attr.underline = u;
     }
 
     setScreenColor(c) {
@@ -299,12 +329,7 @@
         var y = this.cursor.y;
         var r = this.screen.text[this.cursor.y];
         this.screen.text[y] = r.substr(0, x) + t[i] + r.substr(x+1, this.cols-x);
-        this.screen.attr[y][x].fg = this.attr.fg;
-        this.screen.attr[y][x].bg = this.attr.bg;
-        this.screen.attr[y][x].flashf = this.attr.flashf;
-        this.screen.attr[y][x].flashi = this.attr.flashi;
-        this.screen.attr[y][x].flashp = this.attr.flashp;
-        this.screen.attr[y][x].flashr = this.attr.flashr;
+        Object.assign(this.screen.attr[y][x], this.attr);
         x += 1;
         if (x >= this.cols) {
           x = 0;
@@ -417,6 +442,21 @@
       this.move(35, y);
       this.flashPhase = 2;
       this.write("Three");
+
+      y += 1;
+      y += 1;
+      this.resetAttr();
+      this.move(0, y);
+      this.write("Decoration");
+      this.move(20, y);
+      this.underlined = true;
+      this.write("Under");
+      this.move(30, y);
+      this.underlined = false;
+      this.inverted = true;
+      this.write("Inverted");
+
+      this.updateScreen();
     }
   }
 
