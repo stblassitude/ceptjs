@@ -359,6 +359,13 @@
       this.fill(x0, y0, w, h, "\u00A0");
     }
 
+    clearScreen() {
+      this.clear(0, 0, this.cols, this.rows);
+      for (var y = 0; y < this.rows; y++) {
+        this.screen.rows[y].bg = Cept.COLOR_TRANSPARENT;
+      }
+    }
+
     fill(x0, y0, w, h, c) {
       var x1 = x0 + w;
       var y1 = y0 + h;
@@ -373,6 +380,20 @@
       }
     }
 
+    move(x, y) {
+      this.cursor.x = x;
+      this.cursor.y = y;
+    }
+
+    resetAttr() {
+      this.flashMode = Cept.FLASH_MODE_STEADY;
+      this.flashInverted = false;
+      this.flashReducedIntensity = false;
+      this.flashPhase = 0;
+      this.inverted = false;
+      this.underlined = false;
+    }
+
     updateScreen(force) {
       if (force)
         this.forcedUpdate = true;
@@ -380,11 +401,6 @@
         this._updateRow(y);
       }
       this.forcedUpdate = false;
-    }
-
-    move(x, y) {
-      this.cursor.x = x;
-      this.cursor.y = y;
     }
 
     write(t) {
@@ -412,41 +428,36 @@
         var t = ""
         for (var x = 0; x < this.cols; x++) {
           t += String.fromCharCode(64+x+y);
-          this.screen.attr[y][x].bg = (this.rows+x-y) % 32;
+          this.screen.rows[y].attr[x].bg = (this.rows+x-y) % 32;
         }
-        this.screen.text[y] = t;
+        this.screen.rows[y].text = t;
       }
       for (var y = 10; y < 12; y++) {
         for (var x = 0; x < this.cols; x++) {
-          this.screen.attr[y][x].flashf = 1;
-          this.screen.attr[y][x].flashp = y-10;
-          this.screen.attr[y][x].flashi = x >= 20;
-          this.screen.attr[y][x].flashr = ~~(x / 10) % 2 == 1;
+          this.screen.rows[y].attr[x].flashf = 1;
+          this.screen.rows[y].attr[x].flashp = y-10;
+          this.screen.rows[y].attr[x].flashi = x >= 20;
+          this.screen.rows[y].attr[x].flashr = ~~(x / 10) % 2 == 1;
         }
       }
       for (var y = 12; y < 15; y++) {
         for (var x = 0; x < this.cols; x++) {
-          this.screen.attr[y][x].flashf = 2;
-          this.screen.attr[y][x].flashp = y-12;
-          this.screen.attr[y][x].flashi = x >= 20;
-          this.screen.attr[y][x].flashr = ~~(x / 10 ) % 2 == 1;
+          this.screen.rows[y].attr[x].flashf = 2;
+          this.screen.rows[y].attr[x].flashp = y-12;
+          this.screen.rows[y].attr[x].flashi = x >= 20;
+          this.screen.rows[y].attr[x].flashr = ~~(x / 10 ) % 2 == 1;
         }
       }
       this.updateScreen();
     }
 
-    resetAttr() {
-      this.flashMode = Cept.FLASH_MODE_STEADY;
-      this.flashInverted = false;
-      this.flashReducedIntensity = false;
-      this.flashPhase = 0;
-    }
-
     testPattern2() {
       var y;
       this.setScreenColor(Cept.COLOR_REDUCED_INTENSITY_BLUE);
-      this.clear(0, 0, this.cols, this.rows);
+      this.bgColor = Cept.COLOR_TRANSPARENT;
+      this.clearScreen();
       this.resetAttr();
+      this.move(0, 0);
       this.color = Cept.COLOR_WHITE;
       this.write("Attribute Test");
 

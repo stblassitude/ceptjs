@@ -7,12 +7,22 @@
       var c = cept.init("#ceptscreen", {
         foo: "bar"
       });
-      c.testPattern2();
+      // c.testPattern2();
+      document.getElementById("test1").addEventListener("click", function(ev) {
+        c.testPattern1();
+      });
+      document.getElementById("test2").addEventListener("click", function(ev) {
+        c.testPattern2();
+      });
     })
   </script>
 </head>
 <body>
   <h1>cept.js</h1>
   <div id="ceptscreen"></div>
+  <div id="controls">
+    <button id="test1">Test Pattern 1</button>
+    <button id="test2">Test Pattern 2</button>
+  </div>
 </body>
 </html>
