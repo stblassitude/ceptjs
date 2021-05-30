@@ -338,7 +338,7 @@
     }
 
     set screenColor(c) {
-      setScreenColor(c)
+      this.setScreenColor(c)
     }
 
     get underlined() {
@@ -374,7 +374,7 @@
           + c.repeat(w)
           + this.screen.rows[y].text.substr(x1);
         for (var x = x0; x < x1; x++) {
-          this.screen.rows[y].attr[x].bg = Cept.COLOR_TRANSPARENT;
+          this.screen.rows[y].attr[x] = new CeptAttr();
         }
         this._updateRow(y);
       }
@@ -423,6 +423,8 @@
     }
 
     testPattern1() {
+      this.screenColor = Cept.COLOR_BLACK;
+      this.clearScreen();
       for (var y = 0; y < this.rows; y++) {
         this.screen.rows[y].bg = y % 32;
         var t = ""
