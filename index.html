@@ -1,0 +1,18 @@
+<html>
+<head>
+  <title>CEPT.js</title>
+  <script src="cept.js" type="text/javascript"></script>
+  <script type="text/javascript">
+    window.addEventListener('DOMContentLoaded', (event) => {
+      var c = cept.init("#ceptscreen", {
+        foo: "bar"
+      });
+      c.testPattern2();
+    })
+  </script>
+</head>
+<body>
+  <h1>cept.js</h1>
+  <div id="ceptscreen"></div>
+</body>
+</html>
