@@ -2,6 +2,7 @@
 
   class CeptAttr {
     constructor(attr) {
+      this.char = " "
       this.bg = Cept.COLOR_TRANSPARENT;
       this.fg = Cept.COLOR_WHITE;
       this.conceal = false;
@@ -19,7 +20,8 @@
     }
 
     equals(b) {
-      return this.bg == b.bg
+      return this.char == b.char
+        && this.bg == b.bg
         && this.fg == b.fg
         && this.conceal == b.conceal
         && this.flashf == b.flashf
@@ -40,7 +42,6 @@
         this.attr = [];
         this.bg = colsOrRow.bg;
         this.cols = colsOrRow.cols;
-        this.text = colsOrRow.text;
         for (var x = 0; x < this.cols; x++) {
           this.attr[x] = new CeptAttr(colsOrRow.attr[x]);
         }
@@ -48,7 +49,6 @@
         this.attr = [];
         this.bg = Cept.COLOR_TRANSPARENT;
         this.cols = colsOrRow;
-        this.text = "\u00A0".repeat(this.cols);
         for (var x = 0; x < this.cols; x++) {
           this.attr[x] = new CeptAttr();
         }
@@ -56,8 +56,7 @@
     }
 
     equals(b) {
-      if (this.text != b.text
-        || this.bg != b.bg
+      if (this.bg != b.bg
         || this.cols != b.cols
         || this.attr.length != b.attr.length) {
           return false;
@@ -120,9 +119,7 @@
       this.screen.lastrows = []
       this.screen.bg = Cept.COLOR_BLACK;
       this.screen.attr = [];
-      this.screen.text = []
       for (var y = 0; y < this.rows; y++) {
-        this.screen.text[y] = ".".repeat(this.cols);
         this.screen.attr[y] = [];
         this.screen.rows[y] = new CeptScreenRow(this.cols);
         this.screen.lastrows[y] = new CeptScreenRow(this.cols);
@@ -237,7 +234,7 @@
           Object.assign(lastAttr, nextAttr);
           text = "";
         }
-        text += row.text.substr(x, 1);
+        text += nextAttr.char;
       }
       spans.push(this._spanForAttr(lastAttr, text));
       return spans;
@@ -249,24 +246,28 @@
     _blankOutDoubles(row, y) {
       for (var x = 0; x < this.cols-1; x++) {
         if (row.attr[x].size == Cept.SIZE_DOUBLE_WIDTH) {
-          row.text = row.text.substr(0, x+1) + " " + row.text.substr(x+2);
+          row.attr[x+1].char = " "
         }
       }
       if (y > 0) {
         for (var x = 0; x < this.cols; x++) {
-          if (this.screen.rows[y-1].attr[x].size == Cept.SIZE_DOUBLE_SIZE_BELOW) {
-            row.text = row.text.substr(0, x) + "  " + row.text.substr(x+2);
-          } else if (this.screen.rows[y-1].attr[x].size == Cept.SIZE_DOUBLE_HEIGHT_BELOW) {
-            row.text = row.text.substr(0, x) + " " + row.text.substr(x+1);
+          var size = this.screen.rows[y-1].attr[x].size;
+          if (size == Cept.SIZE_DOUBLE_SIZE_BELOW) {
+            row.attr[x].char = " ";
+            row.attr[x+1].char = " ";
+          } else if (size == Cept.SIZE_DOUBLE_HEIGHT_BELOW) {
+            row.attr[x].char = " ";
           }
         }
       }
       if (y < this.rows-1) {
         for (var x = 0; x < this.cols; x++) {
-          if (this.screen.rows[y+1].attr[x].size == Cept.SIZE_DOUBLE_SIZE_ABOVE) {
-            row.text = row.text.substr(0, x) + "  " + row.text.substr(x+2);
-          } else if (this.screen.rows[y+1].attr[x].size == Cept.SIZE_DOUBLE_HEIGHT_ABOVE) {
-            row.text = row.text.substr(0, x) + " " + row.text.substr(x+1);
+          var size = this.screen.rows[y+1].attr[x].size;
+          if (size == Cept.SIZE_DOUBLE_SIZE_ABOVE) {
+            row.attr[x].char = " ";
+            row.attr[x+1].char = " ";
+          } else if (size == Cept.SIZE_DOUBLE_HEIGHT_ABOVE) {
+            row.attr[x].char = " ";
           }
         }
       }
@@ -468,11 +469,9 @@
       var x1 = x0 + w;
       var y1 = y0 + h;
       for (var y = y0; y < y1; y++) {
-        this.screen.rows[y].text = this.screen.rows[y].text.substr(0, x0)
-          + c.repeat(w)
-          + this.screen.rows[y].text.substr(x1);
         for (var x = x0; x < x1; x++) {
           this.screen.rows[y].attr[x] = new CeptAttr();
+          this.screen.rows[y].attr[x].char = c;
         }
         this._updateRow(y);
       }
@@ -500,9 +499,8 @@
       for (var i = 0; i < t.length; i++) {
         var x = this.cursor.x;
         var y = this.cursor.y;
-        var r = this.screen.rows[this.cursor.y].text;
-        this.screen.rows[y].text = r.substr(0, x) + t[i] + r.substr(x+1, this.cols-x);
         Object.assign(this.screen.rows[y].attr[x], this.attr);
+        this.screen.rows[y].attr[x].char = t[i];
         x += 1;
         if (this.attr.size == Cept.SIZE_DOUBLE_WIDTH
             || this.attr.size == Cept.SIZE_DOUBLE_SIZE_ABOVE
@@ -524,12 +522,10 @@
       this.clearScreen();
       for (var y = 0; y < this.rows; y++) {
         this.screen.rows[y].bg = y % 32;
-        var t = ""
         for (var x = 0; x < this.cols; x++) {
-          t += String.fromCharCode(64+x+y);
           this.screen.rows[y].attr[x].bg = (this.rows+x-y) % 32;
+          this.screen.rows[y].attr[x].char = String.fromCharCode(64+x+y);
         }
-        this.screen.rows[y].text = t;
       }
       for (var y = 10; y < 12; y++) {
         for (var x = 0; x < this.cols; x++) {
