@@ -1,0 +1,15 @@
+.cept-screen {
+  width: fit-content;
+  padding: 20px 0;
+  font-family: Courier, monospace;
+  transform: scale(1.5, 1);
+  transform-origin: left top;
+}
+
+.cept-row {
+  padding: 0 20px;
+}
+
+.cept-span {
+  display: inline-block
+}

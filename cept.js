@@ -4,11 +4,15 @@
     constructor(attr) {
       this.bg = Cept.COLOR_TRANSPARENT;
       this.fg = Cept.COLOR_WHITE;
+      this.conceal = false;
       this.flashf = 0;
       this.flashi = false;
       this.flashp = 0;
       this.flashr = false;
       this.inv = false;
+      this.marked = false;
+      this.protected = false;
+      this.size = Cept.SIZE_NORMAL;
       this.underline = false;
       if (attr !== undefined)
         Object.assign(this, attr);
@@ -17,11 +21,15 @@
     equals(b) {
       return this.bg == b.bg
         && this.fg == b.fg
+        && this.conceal == b.conceal
         && this.flashf == b.flashf
         && this.flashi == b.flashi
         && this.flashp == b.flashp
         && this.flashr == b.flashr
         && this.inv == b.inv
+        && this.marked == b.marked
+        && this.protected == b.protected
+        && this.size == b.size
         && this.underline == b.underline;
     }
   }
@@ -85,12 +93,20 @@
     static FLASH_MODE_FLASH = 1;
     static FLASH_MODE_FAST = 2;
 
+    static SIZE_NORMAL = 0;
+    static SIZE_DOUBLE_WIDTH = 1;
+    static SIZE_DOUBLE_HEIGHT_ABOVE = 2;
+    static SIZE_DOUBLE_HEIGHT_BELOW = 3;
+    static SIZE_DOUBLE_SIZE_ABOVE = 4;
+    static SIZE_DOUBLE_SIZE_BELOW = 5;
+
     constructor(selector, options={}) {
       this.rows = 25;
       this.cols = 40;
 
-      this.cursor = { x: 0, y: 0};
+      this.cursor = { x: 0, y: 0, visible: false };
       this.attr = new CeptAttr();
+      this.reveal = false;
 
       this.clut = []
       this.resetClut();
@@ -119,18 +135,14 @@
         return;
       }
       this.elements.screen = document.createElement("div");
+      this.elements.screen.className = "cept-screen"
       this.elements.container.appendChild(this.elements.screen);
-      this.elements.screen.style.width = "fit-content";
-      this.elements.screen.style.padding = "20px 0";
-      this.elements.screen.style.fontFamily = "Courier, monospace";
-      this.elements.screen.style.transform = "scale(1.8, 1)";
-      this.elements.screen.style.transformOrigin = "left";
       this.setScreenColor();
 
       this.elements.row = [];
       for (var y = 0; y < this.rows; y++) {
         this.elements.row[y] = document.createElement("div");
-        this.elements.row[y].style.padding = "0 20px";
+        this.elements.row[y].className = "cept-row";
         this.elements.screen.appendChild(this.elements.row[y]);
         this._updateRow(y);
       }
@@ -163,10 +175,28 @@
      */
     _spanForAttr(attr, text) {
       var s = document.createElement("span");
+      s.className = "cept-span"
       s.style.backgroundColor = this._rgba_from_clut(attr.bg);
       s.style.color = this._rgba_from_clut(attr.fg);
       if (attr.underline)
         s.style.textDecoration = "underline";
+      if (attr.size == Cept.SIZE_DOUBLE_WIDTH) {
+        s.style.transform = "scale(2,1)"
+        s.style.transformOrigin = "left bottom"
+      } else if (attr.size == Cept.SIZE_DOUBLE_HEIGHT_ABOVE) {
+        s.style.transform = "scale(1,2)"
+        s.style.transformOrigin = "left bottom"
+      } else if (attr.size == Cept.SIZE_DOUBLE_HEIGHT_BELOW) {
+        s.style.transform = "scale(1,2)"
+        s.style.transformOrigin = "left top"
+      } else if (attr.size == Cept.SIZE_DOUBLE_SIZE_ABOVE) {
+        s.style.transform = "scale(2,2)"
+        s.style.transformOrigin = "left bottom"
+      } else if (attr.size == Cept.SIZE_DOUBLE_SIZE_BELOW) {
+        s.style.transform = "scale(2,2)"
+        s.style.transformOrigin = "left top"
+      }
+      text = text.replaceAll(" ", "\u00a0");
       var t = document.createTextNode(text);
       s.appendChild(t);
       return s;
@@ -177,8 +207,8 @@
      * Create a list of spans for the different formatting on a row. Returns
      * the (potentially unchanged) row, and updates the spans array.
      */
-    _createUpdatedRow(row, spans) {
-      var updatedRow = new CeptScreenRow(row);
+    _createUpdatedRow(row) {
+      var spans = [];
       var lastAttr = new CeptAttr(row.attr[0]);
       var nextAttr = new CeptAttr();
       var text = "";
@@ -194,8 +224,11 @@
           nextAttr.fg = nextAttr.bg;
           nextAttr.bg = temp;
         }
+        if (nextAttr.conceal && !this.reveal) {
+          nextAttr.fg = nextAttr.bg;
+        }
         nextAttr.fg = this._effectiveColor(nextAttr.fg, row);
-        Object.assign(updatedRow.attr[x], nextAttr);
+        Object.assign(row.attr[x], nextAttr);
         // if not the same as before, emit span and start a new one
         if (!lastAttr.equals(nextAttr)) {
           if (text != "") {
@@ -207,7 +240,36 @@
         text += row.text.substr(x, 1);
       }
       spans.push(this._spanForAttr(lastAttr, text));
-      return updatedRow;
+      return spans;
+    }
+
+    /**
+     * Put spaces into positions where double wide/height/size characters are
+     */
+    _blankOutDoubles(row, y) {
+      for (var x = 0; x < this.cols-1; x++) {
+        if (row.attr[x].size == Cept.SIZE_DOUBLE_WIDTH) {
+          row.text = row.text.substr(0, x+1) + " " + row.text.substr(x+2);
+        }
+      }
+      if (y > 0) {
+        for (var x = 0; x < this.cols; x++) {
+          if (this.screen.rows[y-1].attr[x].size == Cept.SIZE_DOUBLE_SIZE_BELOW) {
+            row.text = row.text.substr(0, x) + "  " + row.text.substr(x+2);
+          } else if (this.screen.rows[y-1].attr[x].size == Cept.SIZE_DOUBLE_HEIGHT_BELOW) {
+            row.text = row.text.substr(0, x) + " " + row.text.substr(x+1);
+          }
+        }
+      }
+      if (y < this.rows-1) {
+        for (var x = 0; x < this.cols; x++) {
+          if (this.screen.rows[y+1].attr[x].size == Cept.SIZE_DOUBLE_SIZE_ABOVE) {
+            row.text = row.text.substr(0, x) + "  " + row.text.substr(x+2);
+          } else if (this.screen.rows[y+1].attr[x].size == Cept.SIZE_DOUBLE_HEIGHT_ABOVE) {
+            row.text = row.text.substr(0, x) + " " + row.text.substr(x+1);
+          }
+        }
+      }
     }
 
     /**
@@ -217,11 +279,15 @@
       this.elements.row[y].style.backgroundColor = this._rgba_from_clut(this.screen.rows[y].bg)
 
       var spans = [];
-      var updatedRow = this._createUpdatedRow(this.screen.rows[y], spans)
-      if (this.forcedUpdate || !this.screen.lastrows[y].equals(updatedRow)) {
+      var row = new CeptScreenRow(this.screen.rows[y]);
+      this._blankOutDoubles(row, y);
+      if (this.cursor.visible && y == this.cursor.y && ~~(this.flashp % 2) == 0)
+        row.attr[this.cursor.x].bg = Cept.COLOR_GREY;
+      var spans = this._createUpdatedRow(row)
+      if (this.forcedUpdate || !this.screen.lastrows[y].equals(row)) {
         // only if the new row differs from the last one replace the elements
         this.elements.row[y].replaceChildren(...spans);
-        this.screen.lastrows[y] = updatedRow;
+        this.screen.lastrows[y] = row;
       }
     }
 
@@ -277,6 +343,14 @@
       ];
     }
 
+    get bgColor() {
+      return this.attr.bg;
+    }
+
+    set bgColor(c) {
+      this.attr.bg = c;
+    }
+
     get color() {
       return this.attr.fg;
     }
@@ -285,12 +359,20 @@
       this.attr.fg = c;
     }
 
-    get bgColor() {
-      return this.attr.bg;
+    get concealed() {
+      return this.attr.conceal;
     }
 
-    set bgColor(c) {
-      this.attr.bg = c;
+    set concealed(c) {
+      this.attr.conceal = c;
+    }
+
+    get cursorVisible() {
+      return this.cursor.visible;
+    }
+
+    set cursorVisible(c) {
+      this.cursor.visible = c;
     }
 
     get flashMode() {
@@ -333,12 +415,28 @@
       this.attr.inv = i;
     }
 
+    get revealed() {
+      return this.reveal;
+    }
+
+    set revealed(r) {
+      this.reveal = r;
+    }
+
     get screenColor() {
       return this.screen.bg;
     }
 
     set screenColor(c) {
       this.setScreenColor(c)
+    }
+
+    get size() {
+      return this.attr.size;
+    }
+
+    set size(s) {
+      this.attr.size = s;
     }
 
     get underlined() {
@@ -386,12 +484,7 @@
     }
 
     resetAttr() {
-      this.flashMode = Cept.FLASH_MODE_STEADY;
-      this.flashInverted = false;
-      this.flashReducedIntensity = false;
-      this.flashPhase = 0;
-      this.inverted = false;
-      this.underlined = false;
+      Object.assign(this.attr, new CeptAttr);
     }
 
     updateScreen(force) {
@@ -411,6 +504,10 @@
         this.screen.rows[y].text = r.substr(0, x) + t[i] + r.substr(x+1, this.cols-x);
         Object.assign(this.screen.rows[y].attr[x], this.attr);
         x += 1;
+        if (this.attr.size == Cept.SIZE_DOUBLE_WIDTH
+            || this.attr.size == Cept.SIZE_DOUBLE_SIZE_ABOVE
+            || this.attr.size == Cept.SIZE_DOUBLE_SIZE_BELOW)
+          x += 1;
         if (x >= this.cols) {
           x = 0;
           y += 1;
@@ -460,7 +557,8 @@
       this.clearScreen();
       this.resetAttr();
       this.move(0, 0);
-      this.color = Cept.COLOR_WHITE;
+      this.color = Cept.COLOR_YELLOW;
+      this.size = Cept.SIZE_DOUBLE_SIZE_BELOW;
       this.write("Attribute Test");
 
       y = 1;
@@ -521,6 +619,24 @@
       this.write("Three");
 
       y += 1;
+      this.resetAttr();
+      this.move(0, y);
+      this.write("Fast/RI/Inverted");
+      this.move(10, y);
+      this.flashMode = Cept.FLASH_MODE_FAST;
+      this.flashInverted = true;
+      this.flashReducedIntensity = true;
+      this.move(25, y);
+      this.flashPhase = 0;
+      this.write("One");
+      this.move(30, y);
+      this.flashPhase = 1;
+      this.write("Two");
+      this.move(35, y);
+      this.flashPhase = 2;
+      this.write("Three");
+
+      y += 1;
       y += 1;
       this.resetAttr();
       this.move(0, y);
@@ -532,6 +648,77 @@
       this.underlined = false;
       this.inverted = true;
       this.write("Inverted");
+
+      y += 1;
+      this.resetAttr();
+      this.move(0, y);
+      this.write("Concealed");
+      this.move(20, y);
+      this.write("Normal");
+      this.move(30, y);
+      this.concealed = true;
+      this.write("Concealed");
+
+      y += 1;
+      y += 1;
+      this.resetAttr();
+      this.move(0, y);
+      this.write("Width");
+      this.move(20, y);
+      this.write("Normal");
+      this.move(30, y);
+      this.color = Cept.COLOR_RED;
+      this.write("hhiiddee");
+      this.move(30, y);
+      this.color = Cept.COLOR_WHITE;
+      this.size = Cept.SIZE_DOUBLE_WIDTH;
+      this.write("Doub");
+
+      y += 1;
+      y += 1;
+      this.resetAttr();
+      this.move(0, y);
+      this.write("Height");
+      this.move(20, y);
+      this.size = Cept.SIZE_DOUBLE_HEIGHT_ABOVE;
+      this.write("D/A");
+      this.move(20, y-1);
+      this.size = Cept.SIZE_NORMAL;
+      this.color = Cept.COLOR_RED;
+      this.write("hid");
+      this.move(30, y);
+      this.color = Cept.COLOR_WHITE;
+      this.size = Cept.SIZE_DOUBLE_HEIGHT_BELOW;
+      this.write("D/B");
+      this.move(30, y+1);
+      this.size = Cept.SIZE_NORMAL;
+      this.color = Cept.COLOR_RED;
+      this.write("hid");
+
+      y += 1;
+      y += 1;
+      this.resetAttr();
+      this.move(0, y);
+      this.write("Size");
+      this.move(20, y);
+      this.color = Cept.COLOR_WHITE;
+      this.size = Cept.SIZE_DOUBLE_SIZE_ABOVE;
+      this.write("D/A");
+      this.move(20, y-1);
+      this.size = Cept.SIZE_NORMAL;
+      this.color = Cept.COLOR_RED;
+      this.write("hide");
+      this.move(30, y);
+      this.color = Cept.COLOR_WHITE;
+      this.size = Cept.SIZE_DOUBLE_SIZE_BELOW;
+      this.write("D/B");
+      this.move(30, y+1);
+      this.size = Cept.SIZE_NORMAL;
+      this.color = Cept.COLOR_RED;
+      this.write("hide");
+
+      this.move(0, 24);
+      this.cursorVisible = true;
 
       this.updateScreen();
     }
