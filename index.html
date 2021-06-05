@@ -5,8 +5,8 @@
   <link href="cept.css" rel="stylesheet">
   <script type="text/javascript">
     window.addEventListener('DOMContentLoaded', (event) => {
-      // var c = cept.init("#ceptscreen");
-      var c = cept.init(document.querySelector("#ceptscreen"));
+      // var c = cept.init("#screen");
+      var c = cept.init(document.querySelector("#screen"));
       document.getElementById("test1").addEventListener("click", function(ev) {
         c.testPattern1();
       });
@@ -22,7 +22,7 @@
 </head>
 <body>
   <h1>cept.js</h1>
-  <div id="ceptscreen"></div>
+  <div id="screen" style="background: url(walking.gif)"></div>
   <div id="controls">
     <button id="test1">Test Pattern 1</button>
     <button id="test2">Test Pattern 2</button>

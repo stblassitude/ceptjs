@@ -140,15 +140,22 @@
       this.elements.screen = document.createElement("div");
       this.elements.screen.className = "cept-screen"
       this.elements.container.appendChild(this.elements.screen);
-      this.setScreenColor();
+
+      this.elements.above = document.createElement("div");
+      this.elements.above.className = "cept-above"
+      this.elements.below = document.createElement("div");
+      this.elements.below.className = "cept-below";
+      this.screenColor = 0;
 
       this.elements.row = [];
+      this.elements.screen.appendChild(this.elements.above);
       for (var y = 0; y < this.rows; y++) {
         this.elements.row[y] = document.createElement("div");
         this.elements.row[y].className = "cept-row";
         this.elements.screen.appendChild(this.elements.row[y]);
         this._updateRow(y);
       }
+      this.elements.screen.appendChild(this.elements.below);
 
       this.clear(10, 10, 20, 5);
     }
@@ -435,7 +442,12 @@
     }
 
     set screenColor(c) {
-      this.setScreenColor(c)
+      this.screen.bg = c;
+      this.elements.above.style.backgroundColor = this._rgba_from_clut(this.screen.bg);
+      this.elements.below.style.backgroundColor = this._rgba_from_clut(this.screen.bg);
+      for (var y = 0; y < this.rows; y++) {
+        this.screen.rows[y].bg = c;
+      }
     }
 
     get size() {
@@ -454,12 +466,6 @@
       this.attr.underline = u;
     }
 
-    setScreenColor(c) {
-      if (c !== undefined)
-        this.screen.bg = c;
-      this.elements.screen.style.backgroundColor = this._rgba_from_clut(this.screen.bg);
-    }
-
     clear(x0, y0, w, h) {
       this.fill(x0, y0, w, h, "\u00A0");
     }
@@ -467,7 +473,7 @@
     clearScreen() {
       this.clear(0, 0, this.cols, this.rows);
       for (var y = 0; y < this.rows; y++) {
-        this.screen.rows[y].bg = Cept.COLOR_TRANSPARENT;
+        this.screen.rows[y].bg = this.screenColor;
       }
     }
 
@@ -554,7 +560,7 @@
 
     testPattern2() {
       var y;
-      this.setScreenColor(Cept.COLOR_REDUCED_INTENSITY_BLUE);
+      this.screenColor = Cept.COLOR_REDUCED_INTENSITY_BLUE;
       this.bgColor = Cept.COLOR_TRANSPARENT;
       this.clearScreen();
       this.resetAttr();

@@ -1,9 +1,15 @@
 .cept-screen {
+  background: none;
   width: fit-content;
-  padding: 20px 0;
+  padding: 0;
   font-family: Courier, monospace;
   transform: scale(1.5, 1);
   transform-origin: left top;
+}
+
+.cept-above, .cept-below {
+  min-width: 100%;
+  min-height: 20px;
 }
 
 .cept-row {
