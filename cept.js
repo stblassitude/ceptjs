@@ -762,7 +762,7 @@
       this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.color = Cept.COLOR_WHITE;
       this.size = Cept.SIZE_DOUBLE_WIDTH;
-      this.write("Doub");
+      this.write("Doubl");
 
       y += 1;
       y += 1;
@@ -772,7 +772,7 @@
       this.move(20, y);
       this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.size = Cept.SIZE_DOUBLE_HEIGHT_ABOVE;
-      this.write("D/A");
+      this.write("DH/A");
       this.move(20, y-1);
       this.resetAttr();
       this.color = Cept.COLOR_RED;
@@ -781,7 +781,7 @@
       this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.color = Cept.COLOR_WHITE;
       this.size = Cept.SIZE_DOUBLE_HEIGHT_BELOW;
-      this.write("D/B");
+      this.write("DH/B");
       this.move(30, y+1);
       this.resetAttr();
       this.color = Cept.COLOR_RED;
@@ -796,9 +796,9 @@
       this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.color = Cept.COLOR_WHITE;
       this.size = Cept.SIZE_DOUBLE_SIZE_ABOVE;
-      this.write("D/A");
+      this.write("DS/A");
       this.move(20, y-1);
-      y += 1;
+      // y += 1;
       this.resetAttr();
       this.color = Cept.COLOR_RED;
       this.write("hide");
@@ -806,7 +806,7 @@
       this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.color = Cept.COLOR_WHITE;
       this.size = Cept.SIZE_DOUBLE_SIZE_BELOW;
-      this.write("D/B");
+      this.write("DS/B");
       this.move(30, y+1);
       y += 1;
       this.resetAttr();
