@@ -31,7 +31,8 @@
 }
 
 .cept-span {
-  display: inline-block
+  display: inline-block;
+  transform-origin: left bottom;
 }
 
 .cept-ul {
@@ -42,16 +43,15 @@
   transform: scale(2, 1);
 }
 
-.cept-dha, cept-dhb {
+.cept-dha, .cept-dhb {
   transform: scale(1, 2);
 }
 
-.cept-dsa, cept-dsb {
+.cept-dsa, .cept-dsb {
   transform: scale(2, 2);
 }
 
 .cept-dha, .cept-dsa {
-  transform-origin: left bottom;
 }
 
 .cept-dhb, .cept-dsb {
