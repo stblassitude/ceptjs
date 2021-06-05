@@ -100,6 +100,18 @@
     static SIZE_DOUBLE_SIZE_BELOW = 5;
 
     constructor(selector, options={}) {
+      this.elements = {};
+      if (selector instanceof HTMLElement) {
+        this.elements.container = selector;
+      } else if (selector instanceof String) {
+        this.elements.container = document.querySelector(selector);
+        if (this.elements.container === null) {
+          throw "Unable to find element matching " + selector;
+        }
+      } else {
+        throw "Need to specify element or selector";
+      }
+
       this.rows = 25;
       this.cols = 40;
 
@@ -125,12 +137,6 @@
         this.screen.lastrows[y] = new CeptScreenRow(this.cols);
       }
 
-      this.elements = {};
-      this.elements.container = document.querySelector(selector);
-      if (this.elements.container === null) {
-        console.log("Unable to find element matching " + selector);
-        return;
-      }
       this.elements.screen = document.createElement("div");
       this.elements.screen.className = "cept-screen"
       this.elements.container.appendChild(this.elements.screen);

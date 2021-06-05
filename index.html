@@ -5,10 +5,8 @@
   <link href="cept.css" rel="stylesheet">
   <script type="text/javascript">
     window.addEventListener('DOMContentLoaded', (event) => {
-      var c = cept.init("#ceptscreen", {
-        foo: "bar"
-      });
-      // c.testPattern2();
+      // var c = cept.init("#ceptscreen");
+      var c = cept.init(document.querySelector("#ceptscreen"));
       document.getElementById("test1").addEventListener("click", function(ev) {
         c.testPattern1();
       });
