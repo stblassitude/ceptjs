@@ -123,8 +123,9 @@
       this.resetClut();
 
       this.flashp = 0;
-      window.setInterval(this._flashInterval.bind(this), 1000/6);
       this.forcedUpdate = true;
+
+      this.id = this._randomId();
 
       this.screen = {}
       this.screen.rows = []
@@ -138,8 +139,18 @@
       }
 
       this.elements.screen = document.createElement("div");
-      this.elements.screen.className = "cept-screen"
+      this.elements.screen.id = "cept-screen-" + this.id;
+      this.elements.screen.className = "cept-screen";
       this.elements.container.appendChild(this.elements.screen);
+
+      var sheet = document.createElement("style");
+      sheet.title = this.elements.screen.id;
+      this.elements.container.appendChild(sheet);
+      for (var i = 0; i < document.styleSheets.length; i++) {
+        if (document.styleSheets[i].title === this.elements.screen.id)
+          this.elements.sheet = document.styleSheets[i]
+      }
+      this._updateStyleSheet();
 
       this.elements.above = document.createElement("div");
       this.elements.above.className = "cept-above"
@@ -158,6 +169,19 @@
       this.elements.screen.appendChild(this.elements.below);
 
       this.clear(10, 10, 20, 5);
+
+      // do this last so no interval is running unless initialization was successful
+      window.setInterval(this._flashInterval.bind(this), 1000/6);
+    }
+
+    _randomId() {
+      var id;
+
+      do {
+        id = btoa(Math.random()).substr(10, 5);
+      } while (document.getElementById("cept-screen-" + id) != null);
+
+      return id;
     }
 
     /**
@@ -185,9 +209,9 @@
      */
     _spanForAttr(attr, text) {
       var s = document.createElement("span");
-      s.className = "cept-span"
-      s.style.backgroundColor = this._rgba_from_clut(attr.bg);
-      s.style.color = this._rgba_from_clut(attr.fg);
+      s.className = "cept-span "
+        + this._bgClass(attr.bg) + " "
+        + this._fgClass(attr.fg);
       if (attr.underline)
         s.style.textDecoration = "underline";
       if (attr.size == Cept.SIZE_DOUBLE_WIDTH) {
@@ -290,7 +314,7 @@
      * (Re-)Create the DOM for one row.
      */
     _updateRow(y) {
-      this.elements.row[y].style.backgroundColor = this._rgba_from_clut(this.screen.rows[y].bg)
+      this.elements.row[y].className = "cept-row " + this._bgClass(this.screen.rows[y].bg);
 
       var spans = [];
       var row = new CeptScreenRow(this.screen.rows[y]);
@@ -315,6 +339,28 @@
     _flashInterval() {
       this.flashp = (this.flashp + 1) % 6;
       this.updateScreen();
+    }
+
+    _bgClass(i) {
+      return "cept-bg-" + this.id + "-" + i;
+    }
+
+    _fgClass(i) {
+      return "cept-fg-" + this.id + "-" + i;
+    }
+
+    _updateStyleSheet() {
+      for (var i = 0; i < 32; i++) {
+        if (this.elements.sheet.cssRules.length > i)
+          this.elements.sheet.deleteRule(i);
+        this.elements.sheet.insertRule("." + this._fgClass(i) + " { color: " + this._rgba_from_clut(i) + "}", i);
+      }
+      for (var i = 0; i < 32; i++) {
+        if (this.elements.sheet.cssRules.length > i+32)
+          this.elements.sheet.deleteRule(i+32);
+        this.elements.sheet.insertRule("." + this._bgClass(i) + " { background-color: " + this._rgba_from_clut(i) + "}", i);
+      }
+      console.log(this.elements.sheet.cssRules);
     }
 
     resetClut() {
@@ -443,8 +489,6 @@
 
     set screenColor(c) {
       this.screen.bg = c;
-      this.elements.above.style.backgroundColor = this._rgba_from_clut(this.screen.bg);
-      this.elements.below.style.backgroundColor = this._rgba_from_clut(this.screen.bg);
       for (var y = 0; y < this.rows; y++) {
         this.screen.rows[y].bg = c;
       }
@@ -499,6 +543,8 @@
     }
 
     updateScreen(force) {
+      this.elements.above.className = "cept-above " + this._bgClass(this.screen.bg);
+      this.elements.below.className = "cept-below " + this._bgClass(this.screen.bg);
       if (force)
         this.forcedUpdate = true;
       for (var y = 0; y < this.rows; y++) {
