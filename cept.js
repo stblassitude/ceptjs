@@ -21,18 +21,22 @@
 
     equals(b) {
       return this.char == b.char
-        && this.bg == b.bg
-        && this.fg == b.fg
-        && this.conceal == b.conceal
-        && this.flashf == b.flashf
-        && this.flashi == b.flashi
-        && this.flashp == b.flashp
-        && this.flashr == b.flashr
-        && this.inv == b.inv
-        && this.marked == b.marked
-        && this.protected == b.protected
-        && this.size == b.size
-        && this.underline == b.underline;
+        && this.equalsAttrs(b);
+    }
+
+    equalsAttrs(b) {
+      return this.bg == b.bg
+      && this.fg == b.fg
+      && this.conceal == b.conceal
+      && this.flashf == b.flashf
+      && this.flashi == b.flashi
+      && this.flashp == b.flashp
+      && this.flashr == b.flashr
+      && this.inv == b.inv
+      && this.marked == b.marked
+      && this.protected == b.protected
+      && this.size == b.size
+      && this.underline == b.underline
     }
   }
 
@@ -246,12 +250,13 @@
           nextAttr.bg = temp;
         }
         if (nextAttr.conceal && !this.reveal) {
-          nextAttr.fg = nextAttr.bg;
+          // nextAttr.fg = nextAttr.bg;
+          nextAttr.char = " ";
         }
         nextAttr.fg = this._effectiveColor(nextAttr.fg, row);
         Object.assign(row.attr[x], nextAttr);
         // if not the same as before, emit span and start a new one
-        if (!lastAttr.equals(nextAttr)) {
+        if (!lastAttr.equalsAttrs(nextAttr)) {
           if (text != "") {
             spans.push(this._spanForAttr(lastAttr, text));
           }
