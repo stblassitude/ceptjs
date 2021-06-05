@@ -209,27 +209,14 @@
      */
     _spanForAttr(attr, text) {
       var s = document.createElement("span");
-      s.className = "cept-span "
-        + this._bgClass(attr.bg) + " "
-        + this._fgClass(attr.fg);
-      if (attr.underline)
-        s.style.textDecoration = "underline";
-      if (attr.size == Cept.SIZE_DOUBLE_WIDTH) {
-        s.style.transform = "scale(2,1)"
-        s.style.transformOrigin = "left bottom"
-      } else if (attr.size == Cept.SIZE_DOUBLE_HEIGHT_ABOVE) {
-        s.style.transform = "scale(1,2)"
-        s.style.transformOrigin = "left bottom"
-      } else if (attr.size == Cept.SIZE_DOUBLE_HEIGHT_BELOW) {
-        s.style.transform = "scale(1,2)"
-        s.style.transformOrigin = "left top"
-      } else if (attr.size == Cept.SIZE_DOUBLE_SIZE_ABOVE) {
-        s.style.transform = "scale(2,2)"
-        s.style.transformOrigin = "left bottom"
-      } else if (attr.size == Cept.SIZE_DOUBLE_SIZE_BELOW) {
-        s.style.transform = "scale(2,2)"
-        s.style.transformOrigin = "left top"
-      }
+      s.classList.add("cept-span", this._bgClass(attr.bg), this._fgClass(attr.fg));
+      s.classList.toggle("cept-ul", attr.underline);
+      s.classList.toggle("cept-dw", attr.size == Cept.SIZE_DOUBLE_WIDTH);
+      s.classList.toggle("cept-dha", attr.size == Cept.SIZE_DOUBLE_HEIGHT_ABOVE);
+      s.classList.toggle("cept-dhb", attr.size == Cept.SIZE_DOUBLE_HEIGHT_BELOW);
+      s.classList.toggle("cept-dsa", attr.size == Cept.SIZE_DOUBLE_SIZE_ABOVE);
+      s.classList.toggle("cept-dsb", attr.size == Cept.SIZE_DOUBLE_SIZE_BELOW);
+
       text = text.replaceAll(" ", "\u00a0");
       var t = document.createTextNode(text);
       s.appendChild(t);
@@ -360,7 +347,6 @@
           this.elements.sheet.deleteRule(i+32);
         this.elements.sheet.insertRule("." + this._bgClass(i) + " { background-color: " + this._rgba_from_clut(i) + "}", i);
       }
-      console.log(this.elements.sheet.cssRules);
     }
 
     resetClut() {
@@ -623,6 +609,7 @@
       this.write("Flash");
       this.move(20, y);
       this.flashMode = Cept.FLASH_MODE_FLASH;
+      this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.write("Normal");
       this.move(30, y);
       this.flashInverted = true;
@@ -635,6 +622,7 @@
       this.move(20, y);
       this.flashReducedIntensity = true;
       this.flashMode = Cept.FLASH_MODE_FLASH;
+      this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.write("Normal");
       this.move(30, y);
       this.flashInverted = true;
@@ -645,6 +633,7 @@
       this.move(0, y);
       this.write("Fast");
       this.flashMode = Cept.FLASH_MODE_FAST;
+      this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.move(25, y);
       this.flashPhase = 0;
       this.write("One");
@@ -660,6 +649,7 @@
       this.move(0, y);
       this.write("Fast/RI");
       this.move(10, y);
+      this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.flashMode = Cept.FLASH_MODE_FAST;
       this.flashReducedIntensity = true;
       this.move(25, y);
@@ -677,6 +667,7 @@
       this.move(0, y);
       this.write("Fast/RI/Inverted");
       this.move(10, y);
+      this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.flashMode = Cept.FLASH_MODE_FAST;
       this.flashInverted = true;
       this.flashReducedIntensity = true;
@@ -696,6 +687,7 @@
       this.move(0, y);
       this.write("Decoration");
       this.move(20, y);
+      this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.underlined = true;
       this.write("Under");
       this.move(30, y);
@@ -708,6 +700,7 @@
       this.move(0, y);
       this.write("Concealed");
       this.move(20, y);
+      this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.write("Normal");
       this.move(30, y);
       this.concealed = true;
@@ -719,11 +712,14 @@
       this.move(0, y);
       this.write("Width");
       this.move(20, y);
+      this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.write("Normal");
       this.move(30, y);
+      this.resetAttr();
       this.color = Cept.COLOR_RED;
       this.write("hhiiddee");
       this.move(30, y);
+      this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.color = Cept.COLOR_WHITE;
       this.size = Cept.SIZE_DOUBLE_WIDTH;
       this.write("Doub");
@@ -734,18 +730,20 @@
       this.move(0, y);
       this.write("Height");
       this.move(20, y);
+      this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.size = Cept.SIZE_DOUBLE_HEIGHT_ABOVE;
       this.write("D/A");
       this.move(20, y-1);
-      this.size = Cept.SIZE_NORMAL;
+      this.resetAttr();
       this.color = Cept.COLOR_RED;
       this.write("hid");
       this.move(30, y);
+      this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.color = Cept.COLOR_WHITE;
       this.size = Cept.SIZE_DOUBLE_HEIGHT_BELOW;
       this.write("D/B");
       this.move(30, y+1);
-      this.size = Cept.SIZE_NORMAL;
+      this.resetAttr();
       this.color = Cept.COLOR_RED;
       this.write("hid");
 
@@ -755,19 +753,23 @@
       this.move(0, y);
       this.write("Size");
       this.move(20, y);
+      this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.color = Cept.COLOR_WHITE;
       this.size = Cept.SIZE_DOUBLE_SIZE_ABOVE;
       this.write("D/A");
       this.move(20, y-1);
-      this.size = Cept.SIZE_NORMAL;
+      y += 1;
+      this.resetAttr();
       this.color = Cept.COLOR_RED;
       this.write("hide");
       this.move(30, y);
+      this.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
       this.color = Cept.COLOR_WHITE;
       this.size = Cept.SIZE_DOUBLE_SIZE_BELOW;
       this.write("D/B");
       this.move(30, y+1);
-      this.size = Cept.SIZE_NORMAL;
+      y += 1;
+      this.resetAttr();
       this.color = Cept.COLOR_RED;
       this.write("hide");
 

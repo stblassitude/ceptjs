@@ -19,3 +19,27 @@
 .cept-span {
   display: inline-block
 }
+
+.cept-ul {
+  text-decoration: underline;
+}
+
+.cept-dw {
+  transform: scale(2, 1);
+}
+
+.cept-dha, cept-dhb {
+  transform: scale(1, 2);
+}
+
+.cept-dsa, cept-dsb {
+  transform: scale(2, 2);
+}
+
+.cept-dha, .cept-dsa {
+  transform-origin: left bottom;
+}
+
+.cept-dhb, .cept-dsb {
+  transform-origin: left top;
+}
