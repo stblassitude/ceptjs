@@ -354,6 +354,15 @@
       }
     }
 
+    _limitCursor() {
+      this.cursor.x %= this.cols;
+      if (this.cursor.x < 0)
+        this.cursor.x = this.cols - this.cursor.x;
+      this.cursor.y %= this.rows;
+      if (this.cursor.y < 0)
+        this.cursor.y = this.rows - this.cursor.y;
+    }
+
     resetClut() {
       this.clut = [
         [0, 0, 0, 1],
@@ -527,6 +536,32 @@
     move(x, y) {
       this.cursor.x = x;
       this.cursor.y = y;
+      this._limitCursor();
+    }
+
+    moveUp() {
+      this.cursor.y--;
+      this._limitCursor();
+    }
+
+    moveDown() {
+      this.cursor.y++;
+      this._limitCursor();
+    }
+
+    moveLeft() {
+      this.cursor.x--;
+      this._limitCursor();
+    }
+
+    moveRight() {
+      this.cursor.x++;
+      this._limitCursor();
+    }
+
+    moveReturn() {
+      this.cursor.x = 0;
+      this._limitCursor();
     }
 
     resetAttr() {
