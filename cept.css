@@ -1,8 +1,22 @@
+@font-face {
+  font-family: "European Teletext";
+  src: url("fonts/EuropeanTeletext.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Galax Teletext";
+  src: url("fonts/MODE7GX0.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "ModeSeven";
+  src: url("fonts/modeseven.ttf") format("truetype");
+}
+
 .cept-screen {
   background: none;
   width: fit-content;
   padding: 0;
-  font-family: Courier, monospace;
   transform: scale(1.5, 1);
   transform-origin: left top;
 }
