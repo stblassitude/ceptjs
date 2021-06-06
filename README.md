@@ -10,4 +10,4 @@ A terminal emulator compliant with ETS 300 072
 
 [Galax Teletext](https://galax.xyz/TELETEXT/) has a custom license: "This font is free to use in non-commercial projects. I would appreciate a credit and notification that you are using it."
 
-Neither one covers all characters defined in the CEPT standard, but Galax Teletext at least covers the mosaic characters.
+[Fairfax HD](https://www.kreativekorp.com/software/fonts/fairfaxhd.shtml)  by KreativeCorp is licensed under the OFL.

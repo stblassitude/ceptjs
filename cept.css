@@ -13,6 +13,11 @@
   src: url("fonts/modeseven.ttf") format("truetype");
 }
 
+@font-face {
+  font-family: "Fairfax HD";
+  src: url("fonts/FairfaxHD.ttf") format("truetype");
+}
+
 .cept-screen {
   background: none;
   width: fit-content;
