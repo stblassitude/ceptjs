@@ -2,6 +2,12 @@
 
 A terminal emulator compliant with ETS 300 072
 
+## Running A Local Webserver
+
+```
+python3 -m http.server
+```
+
 ## Fonts
 
 [European Teletext](https://notabug.org/HarvettFox96) is CC0 licensed by Jayvee Enaguas.
