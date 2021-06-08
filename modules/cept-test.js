@@ -375,13 +375,27 @@ export default class CeptTest {
     this.cept.screen.rows[2].bg = Cept.COLOR_BLUE;
     this.cept.color = Cept.COLOR_YELLOW;
     this.cept.size = Cept.SIZE_DOUBLE_HEIGHT_BELOW;
-    this.cept.writeUnicode("Charset Alpha Numerical");
+    this.cept.writeUnicode("Receiving bytes");
     this.cept.resetAttr();
 
     this.cept.move(0, 5);
-    this.cept.nextByte(0x41);
-    this.cept.nextByte(0x42);
-    this.cept.nextByte(0xad);
-    this.cept.nextByte(0x41);
+    let bytes = [
+      0x41, 0x42, 0xad, 0x41,
+      0x0d, 0x0a,
+      0x61, // a
+      0x12, 0x45, // RPT 5
+      0x62, // b
+      0x1f, 0x4a, 0x54, // APA 10, 20
+      0x63,
+    ];
+    let i = 0;
+    i = window.setInterval(e => {
+      if (bytes.length > 0) {
+        this.cept.nextByte(bytes.shift());
+      } else {
+        window.clearInterval(i);
+     }
+   }, 100);
+
   }
 }
