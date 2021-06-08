@@ -1,23 +1,24 @@
 import Cept from './modules/cept.js';
+import CeptTest from './modules/cept-test.js';
 
 window.addEventListener('DOMContentLoaded', (event) => {
-  // var c = cept.init("#screen");
-  var c = new Cept(document.querySelector("#screen"));
+  let cept = new Cept("#screen");
+  let ceptTest = new CeptTest(cept);
 
-  document.getElementById("test1").addEventListener("click", function(ev) {
-    c.testPattern1();
+  document.getElementById("charsAndColors").addEventListener("click", function(ev) {
+    ceptTest.charsAndColors();
   });
-  document.getElementById("test2").addEventListener("click", function(ev) {
-    c.testPattern2();
+  document.getElementById("attrs").addEventListener("click", function(ev) {
+    ceptTest.attrs();
   });
   document.getElementById("charsetAlpha").addEventListener("click", function(ev) {
-    c.charsetAlpha();
+    ceptTest.charsetAlpha();
   });
   document.getElementById("charsetMosaic").addEventListener("click", function(ev) {
-    c.charsetMosaic();
+    ceptTest.charsetMosaic();
   });
   document.getElementById("reveal").addEventListener("click", function(ev) {
-    c.revealed = !c.revealed;
-    c.updateScreen();
+    cept.revealed = !cept.revealed;
+    cept.updateScreen();
   });
 });
