@@ -1,5 +1,6 @@
 <html>
 <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
   <title>CEPT.js</title>
   <script src="cept.js" type="text/javascript"></script>
   <link href="cept.css" rel="stylesheet">
@@ -12,6 +13,12 @@
       });
       document.getElementById("test2").addEventListener("click", function(ev) {
         c.testPattern2();
+      });
+      document.getElementById("charsetAlpha").addEventListener("click", function(ev) {
+        c.charsetAlpha();
+      });
+      document.getElementById("charsetMosaic").addEventListener("click", function(ev) {
+        c.charsetMosaic();
       });
       document.getElementById("reveal").addEventListener("click", function(ev) {
         c.revealed = !c.revealed;
@@ -34,6 +41,8 @@
   <div id="controls">
     <button id="test1">Test Pattern 1</button>
     <button id="test2">Test Pattern 2</button>
+    <button id="charsetAlpha">Alpha Numerical</button>
+    <button id="charsetMosaic">Mosaic</button>
     <button id="reveal">Reveal</button>
   </div>
 </body>
