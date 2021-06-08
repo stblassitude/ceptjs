@@ -17,6 +17,9 @@ window.addEventListener('DOMContentLoaded', (event) => {
   document.getElementById("charsetMosaic").addEventListener("click", function(ev) {
     ceptTest.charsetMosaic();
   });
+  document.getElementById("bytestream").addEventListener("click", function(ev) {
+    ceptTest.bytestream();
+  });
   document.getElementById("reveal").addEventListener("click", function(ev) {
     cept.revealed = !cept.revealed;
     cept.updateScreen();

@@ -364,4 +364,24 @@ export default class CeptTest {
     }
   }
 
+  bytestream() {
+    var x;
+    this.cept.screenColor = Cept.COLOR_REDUCED_INTENSITY_BLUE;
+    this.cept.bgColor = Cept.COLOR_TRANSPARENT;
+    this.cept.clearScreen();
+    this.cept.resetAttr();
+    this.cept.move(0, 1);
+    this.cept.screen.rows[1].bg = Cept.COLOR_BLUE;
+    this.cept.screen.rows[2].bg = Cept.COLOR_BLUE;
+    this.cept.color = Cept.COLOR_YELLOW;
+    this.cept.size = Cept.SIZE_DOUBLE_HEIGHT_BELOW;
+    this.cept.writeUnicode("Charset Alpha Numerical");
+    this.cept.resetAttr();
+
+    this.cept.move(0, 5);
+    this.cept.nextByte(0x41);
+    this.cept.nextByte(0x42);
+    this.cept.nextByte(0xad);
+    this.cept.nextByte(0x41);
+  }
 }

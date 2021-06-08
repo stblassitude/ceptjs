@@ -1,3 +1,6 @@
+import CeptCodeSets from './cept-codesets.js';
+import CeptInputState from './cept-inputstate.js'
+
 class CeptAttr {
 
   constructor(attr) {
@@ -172,6 +175,17 @@ export default class Cept {
     this.elements.screen.appendChild(this.elements.below);
 
     this.clear(10, 10, 20, 5);
+
+    this.inputstate = new CeptInputState(this);
+
+    // default code sets, see section 3.1.4
+    this.inUseCodeTable = [ 0, 2 ];
+    this.gSet = [
+      CeptCodeSets.PRIMARY,
+      CeptCodeSets.SUPP_MOSAIC_2,
+      CeptCodeSets.SUPPLEMENTARY,
+      CeptCodeSets.SUPP_MOSAIC_3,
+    ];
 
     // do this last so no interval is running unless initialization was successful
     window.setInterval(this._flashInterval.bind(this), 1000/6);
@@ -606,5 +620,13 @@ export default class Cept {
     for (let c of t) {
       this.write(c)
     }
+  }
+
+  writeCharacter(c) {
+    this.write(this.gSet[this.inUseCodeTable[c >> 7]][(c & 0x7f) - 0x20]);
+  }
+
+  nextByte(b) {
+    this.inputstate.nextByte(b);
   }
 }
