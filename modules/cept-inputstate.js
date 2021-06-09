@@ -7,9 +7,15 @@ export default class CeptInputState {
   static STATE_RPT = 1;
   static STATE_ESC = 2;
   static STATE_APA = 3;
+  static STATE_COMBINING = 4;
 
   static STATE_ESC_IDLE = 0;
   static STATE_ESC_SUPP_CTRL = 1;
+  static STATE_ESC_DESIGNATION_GC = 2;
+  static STATE_ESC_DESIGNATION_GC_EXT = 3;
+  static STATE_ESC_FSFR_B0 = 4;
+  static STATE_ESC_FSFR_SCREEN = 5;
+  static STATE_ESC_FSFR_ROW = 6;
 
   static STATE_APA_B0 = 0;
   static STATE_APA_B1 = 1;
@@ -34,6 +40,21 @@ export default class CeptInputState {
     this.apay = 0;
     this.suppCtrl = CeptInputState.SUPPCTRL_NONE;
     this.singleShift = CeptInputState.SINGLE_SHIFT_NONE;
+    // default code sets, see section 3.1.4
+    this.inUseCodeTable = [ 0, 2 ];
+    this.gSet = [
+      CeptCodeSets.PRIMARY,
+      CeptCodeSets.SUPP_MOSAIC_2,
+      CeptCodeSets.SUPPLEMENTARY,
+      CeptCodeSets.SUPP_MOSAIC_3,
+    ];
+    this.clutIndex = 0; // index offset for CLUT in use, ie. 8 for the second CLUT
+    this.combining = 0x00; // saved combining char
+  }
+
+  writeCharacter(c) {
+    this.lastChar = this.gSet[this.inUseCodeTable[c >> 7]][(c & 0x7f) - 0x20];
+    this.cept.write(this.lastChar);
   }
 
   nextByte(b) {
@@ -43,7 +64,7 @@ export default class CeptInputState {
         break;
       case CeptInputState.STATE_RPT:
         for (var i = b & 0x3f; i--; )
-          this.cept.writeCharacter(this.lastCharacter);
+          this.cept.write(this.lastChar);
         this.state = CeptInputState.STATE_IDLE;
         break;
       case CeptInputState.STATE_ESC:
@@ -51,6 +72,10 @@ export default class CeptInputState {
         break;
       case CeptInputState.STATE_APA:
         return this.handleApa(b);
+        break;
+      case CeptInputState.STATE_COMBINING:
+        // b + this.combining
+        this.state = CeptInputState.STATE_IDLE;
         break;
       default:
         this.state = CeptInputState.STATE_IDLE;
@@ -111,17 +136,17 @@ export default class CeptInputState {
           break;
       }
     } else if (b >= 0x80 && (b < 0xa0)) {
-      this.CSI(b);
+      this.handleCsi(b);
     } else {
+      // detect combining diacritics here
       if (this.singleShift != CeptInputState.SINGLE_SHIFT_NONE) {
         let lastSet = this.cept.inUseCodeTable[0];
-        this.cept.inUseCodeTable[0] = this.singleShift;
-        this.cept.writeCharacter(b);
-        this.cept.inUseCodeTable[0] = lastSet;
+        this.inUseCodeTable[0] = this.singleShift;
+        this.writeCharacter(b);
+        this.inUseCodeTable[0] = lastSet;
       } else {
-        this.cept.writeCharacter(b);
+        this.writeCharacter(b);
       }
-      this.lastCharacter = b;
     }
   }
 
@@ -130,9 +155,16 @@ export default class CeptInputState {
       case CeptInputState.STATE_ESC_IDLE:
         if (b >= 0x40 && b <= 0x5f) {
           this.state = CeptInputState.STATE_IDLE;
-          this.CSI(b + 0x40);
+          this.handleCsi(b + 0x40);
         } else if (b == 0x22) {
-          this.state = CeptInputState.STATE_ESC_SUPP_CTRL;
+          this.escState = CeptInputState.STATE_ESC_SUPP_CTRL;
+        } else if (b == 0x23) {
+          this.escState = CeptInputState.STATE_ESC_FSFR_B0;
+        } else if (b >= 0x28 && b <= 0x2b) {
+          this.escState = CeptInputState.STATE_ESC_DESIGNATION_GC;
+          this.gsDesignation = b - 0x28;
+        } else {
+          this.state = CeptInputState.STATE_IDLE;
         }
       case CeptInputState.STATE_ESC_SUPP_CTRL:
         switch (b) {
@@ -144,9 +176,70 @@ export default class CeptInputState {
             this.state = CeptInputState.STATE_IDLE;
         }
         break;
+      case CeptInputState.STATE_ESC_FSFR_B0:
+        switch (b) {
+          case 0x20: // Full Screen Attributes, 2.5.2
+            this.escState = CeptInputState.STATE_ESC_FSFR_SCREEN;
+            break;
+          case 0x21: // Full Row Attributes, 2.5.2
+            this.escState = CeptInputState.STATE_ESC_FSFR_ROW;
+            break;
+        }
+        break;
+      case CeptInputState.STATE_ESC_FSFR_SCREEN:
+        if (b >= 0x40 && b <= 0x4f) {
+          this.cept.screenColor = b - 0x40 + this.clutIndex;
+        }
+        this.state = CeptInputState.STATE_IDLE;
+        break;
+      case CeptInputState.STATE_ESC_FSFR_SCREEN:
+        this.state = CeptInputState.STATE_IDLE;
+        break;
+      case CeptInputState.STATE_ESC_DESIGNATION_GC:
+        switch (b) {
+          case 0x21:
+            this.escState = CeptInputState.STATE_ESC_DESIGNATION_GC_EXT;
+            break;
+          case 0x40:
+            this.gSet[this.gsDesignation] = CeptCodeSets.PRIMARY;
+            this.state = CeptInputState.STATE_IDLE;
+          case 0x63:
+            this.gSet[this.gsDesignation] = CeptCodeSets.SUPP_MOSAIC_2;
+            this.state = CeptInputState.STATE_IDLE;
+          case 0x62:
+            this.gSet[this.gsDesignation] = CeptCodeSets.SUPPLEMENTARY;
+            this.state = CeptInputState.STATE_IDLE;
+          case 0x64:
+            this.gSet[this.gsDesignation] = CeptCodeSets.SUPP_MOSAIC_3;
+            this.state = CeptInputState.STATE_IDLE;
+          default:
+            this.state = CeptInputState.STATE_IDLE;
+        }
+        break;
+      case CeptInputState.STATE_ESC_DESIGNATION_GC:
+        switch (b) {
+          case 0x40:
+            this.gSet[this.gsDesignation] = CeptCodeSets.GREEK;
+            this.state = CeptInputState.STATE_IDLE;
+          default:
+            this.state = CeptInputState.STATE_IDLE;
+        }
+        break;
       default:
         this.state = CeptInputState.STATE_IDLE;
         this.apaState = CeptInputState.STATE_APA_B0;
+    }
+  }
+
+  handleCsi(b) {
+    switch (b) {
+      case 0x42: // STC Serial Control Stop Conceal, 3.5.1
+        this.cept.serialControl(attr => {
+          attr.concealed = false;
+        })
+        break;
+      default:
+        break;
     }
   }
 
@@ -185,6 +278,52 @@ export default class CeptInputState {
       default:
         this.state = CeptInputState.STATE_IDLE;
         this.apaState = CeptInputState.STATE_APA_B0;
+    }
+  }
+
+  /**
+   * Apply one parallel supplementary control set attribute. See 2.3 and 3.5.2
+   */
+  applyParallelSuppCtrl(b, parallel, attr) {
+    if (b >= 0x40 && b <= 0x47) { // 2.3.1c
+      attr.fg = b - 0x40 + this.clutIndex;
+    } else if (b >= 0x50 && b <= 0x57) { // 2.3.2c
+      attr.bg = b - 0x50 + this.clutIndex;
+    } else {
+      switch (b) {
+        case 0x48: // FSH
+          break;
+        case 0x49: // STD
+          break;
+        case 0x4a: // EBX
+          break;
+        case 0x4b: // SBX
+          break;
+        case 0x4c: // NSZ: normal size, 2.3.4
+          break;
+        case 0x4d: // DBH: double height, 2.3.4
+          break;
+        case 0x4e: // DBW: double width, 2.3.5
+          break;
+        case 0x4f: // DBS: double size, 2.3.5
+          break;
+        case 0x58: // CDY
+          break;
+        case 0x59: // SPL: stop lining, 2.3.3
+          break;
+        case 0x5a: // STL: start lining, 2.3.3
+          break;
+        case 0x5b: // CSI
+          break;
+        case 0x5c: // NPO
+          break;
+        case 0x5d: // IPO
+          break;
+        case 0x5e: // TRB
+        break;
+        case 0x5f: // STC
+          break;
+      }
     }
   }
 }

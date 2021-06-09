@@ -102,8 +102,7 @@ export default class Cept {
   static SIZE_DOUBLE_WIDTH = 1;
   static SIZE_DOUBLE_HEIGHT_ABOVE = 2;
   static SIZE_DOUBLE_HEIGHT_BELOW = 3;
-  static SIZE_DOUBLE_SIZE_ABOVE = 4;
-  static SIZE_DOUBLE_SIZE_BELOW = 5;
+  static SIZE_DOUBLE_SIZE = 4;
 
   constructor(selector, options={}) {
     this.elements = {};
@@ -178,15 +177,6 @@ export default class Cept {
 
     this.inputstate = new CeptInputState(this);
 
-    // default code sets, see section 3.1.4
-    this.inUseCodeTable = [ 0, 2 ];
-    this.gSet = [
-      CeptCodeSets.PRIMARY,
-      CeptCodeSets.SUPP_MOSAIC_2,
-      CeptCodeSets.SUPPLEMENTARY,
-      CeptCodeSets.SUPP_MOSAIC_3,
-    ];
-
     // do this last so no interval is running unless initialization was successful
     window.setInterval(this._flashInterval.bind(this), 1000/6);
   }
@@ -231,8 +221,7 @@ export default class Cept {
     s.classList.toggle("cept-dw", attr.size == Cept.SIZE_DOUBLE_WIDTH);
     s.classList.toggle("cept-dha", attr.size == Cept.SIZE_DOUBLE_HEIGHT_ABOVE);
     s.classList.toggle("cept-dhb", attr.size == Cept.SIZE_DOUBLE_HEIGHT_BELOW);
-    s.classList.toggle("cept-dsa", attr.size == Cept.SIZE_DOUBLE_SIZE_ABOVE);
-    s.classList.toggle("cept-dsb", attr.size == Cept.SIZE_DOUBLE_SIZE_BELOW);
+    s.classList.toggle("cept-ds", attr.size == Cept.SIZE_DOUBLE_SIZE);
 
     var t = document.createTextNode(text);
     s.appendChild(t);
@@ -292,10 +281,7 @@ export default class Cept {
     if (y > 0) {
       for (var x = 0; x < this.cols; x++) {
         var size = this.screen.rows[y-1].attr[x].size;
-        if (size == Cept.SIZE_DOUBLE_SIZE_BELOW) {
-          row.attr[x].char = " ";
-          row.attr[x+1].char = " ";
-        } else if (size == Cept.SIZE_DOUBLE_HEIGHT_BELOW) {
+        if (size == Cept.SIZE_DOUBLE_HEIGHT_BELOW) {
           row.attr[x].char = " ";
         }
       }
@@ -303,7 +289,7 @@ export default class Cept {
     if (y < this.rows-1) {
       for (var x = 0; x < this.cols; x++) {
         var size = this.screen.rows[y+1].attr[x].size;
-        if (size == Cept.SIZE_DOUBLE_SIZE_ABOVE) {
+        if (size == Cept.SIZE_DOUBLE_SIZE) {
           row.attr[x].char = " ";
           row.attr[x+1].char = " ";
         } else if (size == Cept.SIZE_DOUBLE_HEIGHT_ABOVE) {
@@ -579,6 +565,17 @@ export default class Cept {
     Object.assign(this.attr, new CeptAttr);
   }
 
+  serialControl(f) {
+    for (var x = this.cursor.x; x < this.screen.cols; x++) {
+      let attr = this.screen.rows[this.cursor.y].attr[x];
+      if (attr.marked)
+        break;
+      f(attr);
+    }
+    this.screen.rows[this.cursor.y].attr[this.cursor.x].marked = true;
+    this.moveRight();
+  }
+
   updateScreen(force) {
     this.elements.above.className = "cept-above " + this._bgClass(this.screen.bg);
     this.elements.below.className = "cept-below " + this._bgClass(this.screen.bg);
@@ -602,8 +599,7 @@ export default class Cept {
     this.screen.rows[y].attr[x].char = c;
     x += 1;
     if (this.attr.size == Cept.SIZE_DOUBLE_WIDTH
-        || this.attr.size == Cept.SIZE_DOUBLE_SIZE_ABOVE
-        || this.attr.size == Cept.SIZE_DOUBLE_SIZE_BELOW)
+        || this.attr.size == Cept.SIZE_DOUBLE_SIZE)
       x += 1;
     if (x >= this.cols) {
       x = 0;
@@ -620,10 +616,6 @@ export default class Cept {
     for (let c of t) {
       this.write(c)
     }
-  }
-
-  writeCharacter(c) {
-    this.write(this.gSet[this.inUseCodeTable[c >> 7]][(c & 0x7f) - 0x20]);
   }
 
   nextByte(b) {

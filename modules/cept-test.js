@@ -42,9 +42,9 @@ export default class CeptTest {
     this.cept.bgColor = Cept.COLOR_TRANSPARENT;
     this.cept.clearScreen();
     this.cept.resetAttr();
-    this.cept.move(0, 0);
+    this.cept.move(0, 1);
     this.cept.color = Cept.COLOR_YELLOW;
-    this.cept.size = Cept.SIZE_DOUBLE_SIZE_BELOW;
+    this.cept.size = Cept.SIZE_DOUBLE_SIZE;
     this.cept.writeUnicode("Attribute Test");
 
     y = 1;
@@ -201,20 +201,10 @@ export default class CeptTest {
     this.cept.move(20, y);
     this.cept.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
     this.cept.color = Cept.COLOR_WHITE;
-    this.cept.size = Cept.SIZE_DOUBLE_SIZE_ABOVE;
-    this.cept.writeUnicode("DS/A");
+    this.cept.size = Cept.SIZE_DOUBLE_SIZE;
+    this.cept.writeUnicode("Doubl");
     this.cept.move(20, y-1);
     // y += 1;
-    this.cept.resetAttr();
-    this.cept.color = Cept.COLOR_RED;
-    this.cept.writeUnicode("hide");
-    this.cept.move(30, y);
-    this.cept.bgColor = Cept.COLOR_REDUCED_INTENSITY_GREEN;
-    this.cept.color = Cept.COLOR_WHITE;
-    this.cept.size = Cept.SIZE_DOUBLE_SIZE_BELOW;
-    this.cept.writeUnicode("DS/B");
-    this.cept.move(30, y+1);
-    y += 1;
     this.cept.resetAttr();
     this.cept.color = Cept.COLOR_RED;
     this.cept.writeUnicode("hide");

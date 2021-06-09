@@ -53,13 +53,13 @@
   transform: scale(1, 2);
 }
 
-.cept-dsa, .cept-dsb {
+.cept-ds {
   transform: scale(2, 2);
 }
 
-.cept-dha, .cept-dsa {
+.cept-dha, .cept-ds {
 }
 
-.cept-dhb, .cept-dsb {
+.cept-dhb {
   transform-origin: left top;
 }
