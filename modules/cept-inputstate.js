@@ -8,6 +8,7 @@ export default class CeptInputState {
   static STATE_ESC = 2;
   static STATE_APA = 3;
   static STATE_COMBINING = 4;
+  static STATE_CSI = 5;
 
   static STATE_ESC_IDLE = 0;
   static STATE_ESC_SUPP_CTRL = 1;
@@ -42,11 +43,13 @@ export default class CeptInputState {
     this.singleShift = CeptInputState.SINGLE_SHIFT_NONE;
     // default code sets, see section 3.1.4
     this.inUseCodeTable = [ 0, 2 ];
+    this.lastCodeTable = -1;  // which G set to switch back to when returning from the L set
     this.gSet = [
       CeptCodeSets.PRIMARY,
       CeptCodeSets.SUPP_MOSAIC_2,
       CeptCodeSets.SUPPLEMENTARY,
       CeptCodeSets.SUPP_MOSAIC_3,
+      CeptCodeSets.SUPP_MOSAIC_1, // we cheat by using this position for the L set by setting inUseCodeTable[0] = 4
     ];
     this.clutIndex = 0; // index offset for CLUT in use, ie. 8 for the second CLUT
     this.combining = 0x00; // saved combining char
@@ -76,6 +79,9 @@ export default class CeptInputState {
       case CeptInputState.STATE_COMBINING:
         // b + this.combining
         this.state = CeptInputState.STATE_IDLE;
+        break;
+      case CeptInputState.STATE_CSI:
+        return this.handleCsi(b);
         break;
       default:
         this.state = CeptInputState.STATE_IDLE;
@@ -216,7 +222,7 @@ export default class CeptInputState {
             this.state = CeptInputState.STATE_IDLE;
         }
         break;
-      case CeptInputState.STATE_ESC_DESIGNATION_GC:
+      case CeptInputState.STATE_ESC_DESIGNATION_GC_EXT:
         switch (b) {
           case 0x40:
             this.gSet[this.gsDesignation] = CeptCodeSets.GREEK;
@@ -285,43 +291,89 @@ export default class CeptInputState {
    * Apply one parallel supplementary control set attribute. See 2.3 and 3.5.2
    */
   applyParallelSuppCtrl(b, parallel, attr) {
-    if (b >= 0x40 && b <= 0x47) { // 2.3.1c
-      attr.fg = b - 0x40 + this.clutIndex;
-    } else if (b >= 0x50 && b <= 0x57) { // 2.3.2c
-      attr.bg = b - 0x50 + this.clutIndex;
+    // parallel: foreground and background
+    // serial: foreground, and alpha or mosaic shift
+    if (b >= 0x40 && b <= 0x47) {
+      if (parallel) {
+        // 2.3.1c
+        attr.fg = b - 0x40 + this.clutIndex;
+      } else {
+        attr.fg = b - 0x40 + this.clutIndex;
+        if (this.inUseCodeTable[0] != 4) {
+          this.lastCodeTable = this.inUseCodeTable[0];
+          this.inUseCodeTable[0] = 4;
+        }
+      }
+    } else if (b >= 0x50 && b <= 0x57) {
+      if (parallel) {
+        // 2.3.2c
+        attr.bg = b - 0x50 + this.clutIndex;
+      } else {
+        attr.fg = b - 0x40 + this.clutIndex;
+        if (this.lastCodeTable >= 0) {
+          this.inUseCodeTable[0] = this.lastCodeTable = -1;;
+          this.lastCodeTable = -1;
+        }
+      }
     } else {
       switch (b) {
-        case 0x48: // FSH
+        case 0x48: // FSH: flash, 2.3.5
+          attr.flashf = Cept.FLASH_MODE_FLASH;
           break;
-        case 0x49: // STD
+        case 0x49: // STD: steady, 2.3.5
+          attr.flashf = Cept.FLASH_MODE_STEADY;
           break;
-        case 0x4a: // EBX
+        case 0x4a: // EBX: start window/box, 2.3.8
           break;
-        case 0x4b: // SBX
+        case 0x4b: // SBX: end window/box, 2.3.8
           break;
         case 0x4c: // NSZ: normal size, 2.3.4
+          attr.size = Cept.SIZE_NORMAL;
           break;
         case 0x4d: // DBH: double height, 2.3.4
+        attr.size = parallel ? Cept.SIZE_DOUBLE_HEIGHT_ABOVE : Cept.SIZE_DOUBLE_HEIGHT_BELOW;
           break;
         case 0x4e: // DBW: double width, 2.3.5
+          attr.size = Cept.SIZE_DOUBLE_WIDTH;
           break;
         case 0x4f: // DBS: double size, 2.3.5
+          attr.size = Cept.SIZE_DOUBLE_SIZE;
           break;
-        case 0x58: // CDY
+        case 0x58: // CDY: start conceal, 2.3.6
+          attr.conceal = true;
           break;
         case 0x59: // SPL: stop lining, 2.3.3
+          attr.underline = false;
           break;
         case 0x5a: // STL: start lining, 2.3.3
+          attr.underline = true;
           break;
         case 0x5b: // CSI
+          this.state = STATE_CSI;
           break;
-        case 0x5c: // NPO
+        case 0x5c: // NPO: normal polarity, 2.3.7 (parallel) or BBD: black backgrund, 2.3.2 (serial)
+          if (parallel)
+            attr.inv = false;
+          else
+            attr.bg = 0;
           break;
-        case 0x5d: // IPO
+        case 0x5d: // IPO: inverted polarity, 2.3.7 (parallel) or NBD: new background, 2.3.2 (serial)
+          if (parallel)
+            attr.inv = true;
+          else
+            attr.bg = attr.fg;
           break;
-        case 0x5e: // TRB
-        break;
-        case 0x5f: // STC
+        case 0x5e: // TRB: transparent background, 2.3.2 (parallel) or HMS: hold mosaic, 2.2 (serial)
+          if (parallel)
+            attr.bg = 8;
+          else
+            0;
+          break;
+        case 0x5f: // STC: stop conceal, 2.3.6 (parallel) or RMS: release mosaic, 2.2 (serial)
+          if (parallel)
+            attr.conceal = false;
+          else
+            0;
           break;
       }
     }
