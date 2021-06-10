@@ -271,6 +271,7 @@ export default class CeptInputState {
       b -= 0x40; // C1 is defined as 4/0 to 5/15
       if (this.c1 == CeptInputState.C1_SERIAL) {
         // apply from current position to the next marker or end of the line
+        this.applySerialSuppCtrl(b, this.cept.attr);
         let attr = this.cept.screen.rows[this.cept.cursor.y].attr[this.cept.cursor.x];
         this.applySerialSuppCtrl(b, attr);
         attr.marked = true;
@@ -405,30 +406,21 @@ export default class CeptInputState {
   /**
    * Apply one serial supplementary control set attribute. See 2.3 and 3.5.2
    */
-  applySerialSuppCtrl(b, parallel, attr) {
-    // parallel: foreground and background
+  applySerialSuppCtrl(b, attr) {
     // serial: foreground, and alpha or mosaic shift
     if (b >= 0x40 && b <= 0x47) {
-      if (parallel) {
-        // 2.3.1c
-        attr.fg = b - 0x40 + this.clutIndex;
-      } else {
-        attr.fg = b - 0x40 + this.clutIndex;
-        if (this.inUseCodeTable[0] != 4) {
-          this.lastCodeTable = this.inUseCodeTable[0];
-          this.inUseCodeTable[0] = 4;
-        }
+      attr.fg = b - 0x40 + this.clutIndex;
+      if (this.lastCodeTable >= 0) {
+        // switch back to previously selected G0
+        this.inUseCodeTable[0] = this.lastCodeTable = -1;;
+        this.lastCodeTable = -1;
       }
     } else if (b >= 0x50 && b <= 0x57) {
-      if (parallel) {
-        // 2.3.2c
-        attr.bg = b - 0x50 + this.clutIndex;
-      } else {
-        attr.fg = b - 0x40 + this.clutIndex;
-        if (this.lastCodeTable >= 0) {
-          this.inUseCodeTable[0] = this.lastCodeTable = -1;;
-          this.lastCodeTable = -1;
-        }
+      attr.fg = b - 0x50 + this.clutIndex;
+      // locking shift to L
+      if (this.inUseCodeTable[0] != 4) {
+        this.lastCodeTable = this.inUseCodeTable[0];
+        this.inUseCodeTable[0] = 4;
       }
     } else {
       switch (b) {
@@ -446,7 +438,7 @@ export default class CeptInputState {
           attr.size = Cept.SIZE_NORMAL;
           break;
         case 0x4d: // DBH: double height, 2.3.4
-        attr.size = parallel ? Cept.SIZE_DOUBLE_HEIGHT_ABOVE : Cept.SIZE_DOUBLE_HEIGHT_BELOW;
+        attr.size = Cept.SIZE_DOUBLE_HEIGHT_BELOW;
           break;
         case 0x4e: // DBW: double width, 2.3.5
           attr.size = Cept.SIZE_DOUBLE_WIDTH;
@@ -466,29 +458,15 @@ export default class CeptInputState {
         case 0x5b: // CSI
           this.state = STATE_CSI;
           break;
-        case 0x5c: // NPO: normal polarity, 2.3.7 (parallel) or BBD: black backgrund, 2.3.2 (serial)
-          if (parallel)
-            attr.inv = false;
-          else
-            attr.bg = 0;
+        case 0x5c: // BBD: black backgrund, 2.3.2
+          attr.bg = 0;
           break;
-        case 0x5d: // IPO: inverted polarity, 2.3.7 (parallel) or NBD: new background, 2.3.2 (serial)
-          if (parallel)
-            attr.inv = true;
-          else
-            attr.bg = attr.fg;
+        case 0x5d: // NBD: new background, 2.3.2
+          attr.bg = attr.fg;
           break;
-        case 0x5e: // TRB: transparent background, 2.3.2 (parallel) or HMS: hold mosaic, 2.2 (serial)
-          if (parallel)
-            attr.bg = 8;
-          else
-            0;
+        case 0x5e: // HMS: hold mosaic, 2.2
           break;
-        case 0x5f: // STC: stop conceal, 2.3.6 (parallel) or RMS: release mosaic, 2.2 (serial)
-          if (parallel)
-            attr.conceal = false;
-          else
-            0;
+        case 0x5f: // RMS: release mosaic, 2.2
           break;
       }
     }

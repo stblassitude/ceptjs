@@ -386,6 +386,10 @@ export default class CeptTest {
       0x1b, 0x23, 0x21, 0x53, // full row attribute yellow background
       0x80, 0x93, // BKF, YLB
       0x66, 0x12, 0x45, // "e" RPT 5
+      0x0d, 0x0a,
+      0x1b, 0x22, 0x40, // ESC 2/2 4/0, switch to serial C1
+      0x84, 0x08, 0x9d, 0x08, 0x83, 0x08, // ANB, APB, NBD, APB, ANY, APB
+      0x67, "f"
     ];
     let i = 0;
     i = window.setInterval(e => {
