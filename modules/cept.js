@@ -518,6 +518,13 @@ export default class Cept {
     }
   }
 
+  /**
+   * Reset display state. See 3.1 General Display Reset
+   */
+  reset() {
+    
+  }
+
   fill(x0, y0, w, h, c) {
     var x1 = x0 + w;
     var y1 = y0 + h;
