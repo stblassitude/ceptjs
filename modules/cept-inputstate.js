@@ -8,7 +8,7 @@ export default class CeptInputState {
   static STATE_ESC = 2;
   static STATE_APA = 3;
   static STATE_COMBINING = 4;
-  static STATE_CSI = 5;
+  static STATE_C1 = 5;
   static STATE_GENERAL_DISPLAY_RESET = 6;
 
   static STATE_ESC_INITIAL = 0;
@@ -90,8 +90,8 @@ export default class CeptInputState {
         // b + this.combining
         this.state = CeptInputState.STATE_INITIAL;
         break;
-      case CeptInputState.STATE_CSI:
-        return this.handleCsi(b);
+      case CeptInputState.STATE_C1:
+        return this.handleC1(b);
         break;
       case CeptInputState.STATE_GENERAL_DISPLAY_RESET:
         this.cept.reset();
@@ -110,27 +110,34 @@ export default class CeptInputState {
       switch(b) {
         case 0x08: // APB
           this.cept.moveLeft();
+          // FIXME: when changing lines, deactivateL
           break;
         case 0x09: // APF
           this.cept.moveRight();
+          // FIXME: when changing lines, deactivateL
           break;
         case 0x0a: // APD
           this.cept.moveDown();
+          this.deactivateL();
           break;
         case 0x0b: // APU
           this.cept.moveUp();
+          this.deactivateL();
           break;
         case 0x0c: // CS
           this.cept.clearScreen();
           break;
         case 0x0d: // APR
           this.cept.moveReturn();
+          this.deactivateL();
           break;
         case 0x0e: // SO
           this.cept.inUseCodeTable[0] = 2;
+          this.deactivateL();
           break;
         case 0x0f: // SI
           this.cept.inUseCodeTable[0] = 0;
+          this.deactivateL();
           break;
         case 0x11: // CON
           break;
@@ -140,9 +147,13 @@ export default class CeptInputState {
         case 0x14: // COF
           break;
         case 0x18: // CAN
+          for (let x = this.cept.cursor.x; x < this.cept.cols; x++) {
+            this.cept.screen.rows[this.cept.cursor.y].attr[x].char = " ";
+          }
           break;
         case 0x19: // SS2
           this.cept.inUseCodeTable[0] = CeptInputState.SINGLE_SHIFT_G2;
+          this.deactivateL();
           break;
         case 0x1b: // ESC
           this.state = CeptInputState.STATE_ESC;
@@ -150,9 +161,11 @@ export default class CeptInputState {
           break;
         case 0x1d: // SS3
           this.cept.inUseCodeTable[0] = CeptInputState.SINGLE_SHIFT_G3;
+          this.deactivateL();
           break;
         case 0x1e: // APH
-        this.cept.move(0, 0);
+          this.cept.move(0, 0);
+          this.deactivateL();
           break;
         case 0x1f: // APA or US
           this.state = CeptInputState.STATE_APA;
@@ -160,7 +173,7 @@ export default class CeptInputState {
           break;
       }
     } else if (b >= 0x80 && (b < 0xa0)) {
-      this.handleCsi(b);
+      this.handleC1(b);
     } else {
       // detect combining diacritics here
       if (this.singleShift != CeptInputState.SINGLE_SHIFT_NONE) {
@@ -179,7 +192,7 @@ export default class CeptInputState {
       case CeptInputState.STATE_ESC_INITIAL:
         if (b >= 0x40 && b <= 0x5f) {
           this.state = CeptInputState.STATE_INITIAL;
-          this.handleCsi(b + 0x40);
+          this.handleC1(b + 0x40);
         } else if (b == 0x22) {
           this.escState = CeptInputState.STATE_ESC_SUPP_CTRL;
         } else if (b == 0x23) {
@@ -198,6 +211,7 @@ export default class CeptInputState {
             break;
           case 0x41:  // Parallel Supplementary Control Function Set, 3.3.2
             this.c1 = CeptInputState.C1_PARALLEL;
+            this.deactivateL();
             break;
         }
         this.state = CeptInputState.STATE_INITIAL;
@@ -265,7 +279,7 @@ export default class CeptInputState {
     }
   }
 
-  handleCsi(b) {
+  handleC1(b) {
     if (b >= 0x80 && b <= 0x9f) {
       // supplementary control function, 3.3
       b -= 0x40; // C1 is defined as 4/0 to 5/15
@@ -333,6 +347,8 @@ export default class CeptInputState {
         this.state = CeptInputState.STATE_INITIAL;
         this.apaState = CeptInputState.STATE_APA_B0;
         this.cept.move(this.apax-1, this.apay-1);
+        // FIXME: only if actually moving to a different line?
+        this.deactivateL();
         break;
       default:
         this.state = CeptInputState.STATE_INITIAL;
@@ -385,7 +401,7 @@ export default class CeptInputState {
           attr.underline = true;
           break;
         case 0x5b: // CSI
-          this.state = STATE_CSI;
+          this.state = STATE_C1;
           break;
         case 0x5c: // NPO: normal polarity, 2.3.7
           attr.inv = false;
@@ -403,6 +419,22 @@ export default class CeptInputState {
     }
   }
 
+  activateL() {
+    // locking shift to L
+    if (this.inUseCodeTable[0] != 4) {
+      this.lastCodeTable = this.inUseCodeTable[0];
+      this.inUseCodeTable[0] = 4;
+    }
+  }
+
+  deactivateL() {
+    if (this.lastCodeTable >= 0) {
+      // switch back to previously selected G0
+      this.inUseCodeTable[0] = this.lastCodeTable = -1;;
+      this.lastCodeTable = -1;
+    }
+  }
+
   /**
    * Apply one serial supplementary control set attribute. See 2.3 and 3.5.2
    */
@@ -410,18 +442,10 @@ export default class CeptInputState {
     // serial: foreground, and alpha or mosaic shift
     if (b >= 0x40 && b <= 0x47) {
       attr.fg = b - 0x40 + this.clutIndex;
-      if (this.lastCodeTable >= 0) {
-        // switch back to previously selected G0
-        this.inUseCodeTable[0] = this.lastCodeTable = -1;;
-        this.lastCodeTable = -1;
-      }
+      this.deactivateL();
     } else if (b >= 0x50 && b <= 0x57) {
       attr.fg = b - 0x50 + this.clutIndex;
-      // locking shift to L
-      if (this.inUseCodeTable[0] != 4) {
-        this.lastCodeTable = this.inUseCodeTable[0];
-        this.inUseCodeTable[0] = 4;
-      }
+      this.activateL
     } else {
       switch (b) {
         case 0x48: // FSH: flash, 2.3.5
@@ -456,7 +480,7 @@ export default class CeptInputState {
           attr.underline = true;
           break;
         case 0x5b: // CSI
-          this.state = STATE_CSI;
+          this.state = STATE_C1;
           break;
         case 0x5c: // BBD: black backgrund, 2.3.2
           attr.bg = 0;
