@@ -4,7 +4,7 @@ The standard is sometimes hard to read, and definitions are spread out over mult
 
 In the tables, "references" point to the part, section, and page number in the standard where information on this control function can be found.
 
-Teh column "OK?" indicates whether this sequence is supported in cept.js.
+The column "OK?" indicates whether this sequence is supported in cept.js.
 
 Note that indices are one-based, and are encoded as such, for example in moving the cursor, or when selecting the color look up table in effect.
 
@@ -84,7 +84,7 @@ The code points are defined in Part 1, §3.3.1, page 77. For descriptions of the
 | BBD      | 0x9c / 0x1b 0x5c | Black background                                      | P1, §2.3.2, p.57  | ✅  |
 | NBD      | 0x9d / 0x1b 0x5d | New background, copies fg to bg color                 | P1, §2.3.2, p.57  | ✅  |
 | HMS      | 0x9e / 0x1b 0x5e | Hold mosaic: print last mosaic on receiving serial C1 | P1, §2.2, p.50    |     |
-| RMS      | 0x9f / 0x1b 0x5f | Release mosaic: print space on receiving serial C1    | P1, §2.2, p.50    |     | 
+| RMS      | 0x9f / 0x1b 0x5f | Release mosaic: print space on receiving serial C1    | P1, §2.2, p.50    |     |
 
 ## The Parallel Supplementary Control Function Set C1
 
@@ -94,10 +94,12 @@ The parallel attribute definitions are also used for full screen and full row at
 
 ## Escape Sequences
 
-Definitions of sequences and their meaning are spread all over the standard. In this table, sequences are ordered numerically by their byte values, where possible.
+In this table, sequences are ordered numerically by their byte values, where possible.
 
 | Sequence       | Bytes                    | Description                             | References       | OK? |
 | -------------- | ------------------------ | --------------------------------------- | ---------------- | --- |
+| ESC 2/2 4/0    | 0x1b 0x22 0x40           | Activate serial C1 set                  | P1, §3.3.1, p.77 | ✅  |
+| ESC 2/2 4/1    | 0x1b 0x22 0x41           | Activate parallel C1 set                | P1, §3.3.1, p.77 | ✅  |
 | ESC 2/3 2/0 Fe | 0x1b 0x23 0x20 0x40-0x5f | Full screen attributes                  | P1, §3.5.2, p.88 | ✅  |
 | ESC 2/3 2/1 Fe | 0x1b 0x23 0x21 0x40-0x5f | Full row attributes                     | P1, §3.5.2, p.88 | ✅  |
 | ESC 4/0-5/15   | 0x1b 0x40-0x45           | Supplementary Control Set C1, see above |                  | ✅  |
