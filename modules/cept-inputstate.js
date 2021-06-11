@@ -8,7 +8,7 @@ export default class CeptInputState {
   static STATE_ESC = 2;
   static STATE_APA = 3;
   static STATE_COMBINING = 4;
-  static STATE_C1 = 5;
+  static STATE_CSI = 5;
   static STATE_GENERAL_DISPLAY_RESET = 6;
 
   static STATE_ESC_INITIAL = 0;
@@ -90,8 +90,8 @@ export default class CeptInputState {
         // b + this.combining
         this.state = CeptInputState.STATE_INITIAL;
         break;
-      case CeptInputState.STATE_C1:
-        return this.handleC1(b);
+      case CeptInputState.STATE_CSI:
+        return this.handleCsi(b);
         break;
       case CeptInputState.STATE_GENERAL_DISPLAY_RESET:
         this.cept.reset();
@@ -279,6 +279,13 @@ export default class CeptInputState {
     }
   }
 
+  handlseCsi(b) {
+    switch (b) {
+      default:
+        this.state = STATE_INITIAL;
+    }
+  }
+
   handleC1(b) {
     if (b >= 0x80 && b <= 0x9f) {
       // supplementary control function, 3.3
@@ -401,7 +408,7 @@ export default class CeptInputState {
           attr.underline = true;
           break;
         case 0x5b: // CSI
-          this.state = STATE_C1;
+          this.state = STATE_CSI;
           break;
         case 0x5c: // NPO: normal polarity, 2.3.7
           attr.inv = false;
@@ -480,7 +487,7 @@ export default class CeptInputState {
           attr.underline = true;
           break;
         case 0x5b: // CSI
-          this.state = STATE_C1;
+          this.state = STATE_CSI;
           break;
         case 0x5c: // BBD: black backgrund, 2.3.2
           attr.bg = 0;
