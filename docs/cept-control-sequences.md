@@ -12,30 +12,30 @@ Note that indices are one-based, and are encoded as such, for example in moving 
 
 The code points are defined in part 1, section 3.2, on page 75. The definitions are mostly in section 2.
 
-| Sequence | Bytes     | Description                                            | References     | OK? |
-| -------- | --------- | ------------------------------------------------------ | -------------- | --- |
-| APB      | 0x08      | Move cursor left (aka backspace)                       | P1, §2.2, p.49 | ✅  |
-| APF      | 0x09      | Move cursor right                                      | P1, §2.2, p.49 | ✅  |
-| APD      | 0x0a      | Move cursor down (aka line feed)                       | P1, §2.2, p.49 | ✅  |
-| APU      | 0x0b      | Move cursor up                                         | P1, §2.2, p.49 | ✅  |
-| CS       | 0x0c      | Clear screen                                           | P1, §2.2, p.49 | ✅  |
-| APR      | 0x0d      | Move cursor to beginning of line (aka carriage return) | P1, §2.2, p.49 | ✅  |
-| SO       | 0x0e      | Shift Out, activate G2 in 0x20-0x7f                    |                | ✅  |
-| SI       | 0x0f      | Shift In, activate G0 in 0x20-7f                       |                | ✅  |
-| CON      | 0x11      |                                                        |                |     |
-| RPT n    | 0x12 n    | Repeat the last alpha character n-0x40 times           |                | ✅  |
-| COF      | 0x14      |                                                        |                |     |
-| CAN      | 0x18      | Cancel, fill the rest of the line with spaces          | P1, §2.2, p.49 | ✅  |
-| SS2      | 0x19      | Single Shift 2, activate G2 in 0x20-0x7f for one char  |                | ✅  |
-| ESC      | 0x1b      | Escape, see below                                      |                | ✅  |
-| SS3      | 0x1d      | Single Shift 3, activate G3 in 0x20-0x7f for one char  |                | ✅  |
-| APH      | 0x1e      | Move cursor to (1,1)                                   | P1, §2.2, p.49 | ✅  |
-| APA x y  | 0x1f x y  | Move cursor to y-0x40, x-0x40                          | P1, §2.2, p.49 | ✅  |
-| US ...   | 0x1f ...  | See VPCE below                                         |                | ✅  |
-| ...      | 0x20-0x7e | Print character as per selected set                    |                | ✅  |
-| DEL      | 0x7f      | Print DEL char (alpha) or all-foreground (mosaic)      |                |     |
-|          | 0x80-0x9f | C1 set, see below                                      |                | ✅  |
-| ...      | 0xa0-0xff | Print character as per selected set                    |                | ✅  |
+| Sequence | Bytes                    | Description                                            | References     | OK? |
+| -------- | ------------------------ | ------------------------------------------------------ | -------------- | --- |
+| APB      | 0x08                     | Move cursor left (aka backspace)                       | P1, §2.2, p.49 | ✅  |
+| APF      | 0x09                     | Move cursor right                                      | P1, §2.2, p.49 | ✅  |
+| APD      | 0x0a                     | Move cursor down (aka line feed)                       | P1, §2.2, p.49 | ✅  |
+| APU      | 0x0b                     | Move cursor up                                         | P1, §2.2, p.49 | ✅  |
+| CS       | 0x0c                     | Clear screen                                           | P1, §2.2, p.49 | ✅  |
+| APR      | 0x0d                     | Move cursor to beginning of line (aka carriage return) | P1, §2.2, p.49 | ✅  |
+| SO       | 0x0e                     | Shift Out, activate G2 in 0x20-0x7f                    |                | ✅  |
+| SI       | 0x0f                     | Shift In, activate G0 in 0x20-7f                       |                | ✅  |
+| CON      | 0x11                     |                                                        |                |     |
+| RPT n    | 0x12 0x40-0x7f           | Repeat the last alpha character n-0x40 times           |                | ✅  |
+| COF      | 0x14                     |                                                        |                |     |
+| CAN      | 0x18                     | Cancel, fill the rest of the line with spaces          | P1, §2.2, p.49 | ✅  |
+| SS2      | 0x19                     | Single Shift 2, activate G2 in 0x20-0x7f for one char  |                | ✅  |
+| ESC      | 0x1b                     | Escape, see below                                      |                | ✅  |
+| SS3      | 0x1d                     | Single Shift 3, activate G3 in 0x20-0x7f for one char  |                | ✅  |
+| APH      | 0x1e                     | Move cursor to (1,1)                                   | P1, §2.2, p.49 | ✅  |
+| APA y x  | 0x1f 0x40-0x7f 0x40-0x7f | Move cursor to y-0x40, x-0x40                          | P1, §2.2, p.49 | ✅  |
+| US ...   | 0x1f ...                 | See VPCE below                                         |                | ✅  |
+| ...      | 0x20-0x7e                | Print character as per selected set                    |                | ✅  |
+| DEL      | 0x7f                     | Print DEL char (alpha) or all-foreground (mosaic)      |                |     |
+|          | 0x80-0x9f                | C1 set, see below                                      |                | ✅  |
+| ...      | 0xa0-0xff                | Print character as per selected set                    |                | ✅  |
 
 
 ## The Serial Supplementary Control Function Set C1
