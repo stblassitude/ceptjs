@@ -13,6 +13,7 @@ The column "OK?" indicates whether this sequence is supported in cept.js.
 ### See Also
 
 * [T/TE 06-05 aka ETS 300 076](https://www.etsi.org/deliver/etsi_i_ets/300001_300099/300076/01_60/ets_300076e01p.pdf)
+* [ISO 2022](https://en.wikipedia.org/wiki/ISO/IEC_2022), while not referenced in T/TE 06-01, is closely related
 
 ## APA vs. US and Data Types
 
