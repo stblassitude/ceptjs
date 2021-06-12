@@ -344,7 +344,7 @@ export default class CeptInputState {
     }
   }
 
-  handlseCsi(b) {
+  handleCsi(b) {
     switch (b) {
       default:
         this.state = STATE_INITIAL;
@@ -356,6 +356,9 @@ export default class CeptInputState {
       // supplementary control function, 3.3
       b -= 0x40; // C1 is defined as 4/0 to 5/15
       if (this.c1 == CeptInputState.C1_SERIAL) {
+        if (b == 0x5b) {
+          this.state = STATE_CSI;
+        }
         if (b == 0x5e) {
           this.holdMosaic = true;
         } else if (b == 0x5f) {
