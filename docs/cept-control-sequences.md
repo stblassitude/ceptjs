@@ -149,10 +149,10 @@ The parallel attribute definitions are also used for full screen and full row at
 | RDB      | `91`  | Select red (2) background     | P1, §2.3.2c, p.58 | ✅  |
 | GRB      | `92`  | Select green (3) background   | P1, §2.3.2c, p.58 | ✅  |
 | YLB      | `93`  | Select yellow (4) background  | P1, §2.3.2c, p.58 | ✅  |
-| MGB      | `94`  | Select blue (5) background    | P1, §2.3.2c, p.58 | ✅  |
-| CNB      | `95`  | Select magenta (6) background | P1, §2.3.2c, p.58 | ✅  |
-| WHB      | `96`  | Select cyan (7) background    | P1, §2.3.2c, p.58 | ✅  |
-| MSW      | `97`  | Select white (8) background   | P1, §2.3.2c, p.58 | ✅  |
+| BLB      | `94`  | Select blue (5) background    | P1, §2.3.2c, p.58 | ✅  |
+| MGB      | `95`  | Select magenta (6) background | P1, §2.3.2c, p.58 | ✅  |
+| CNB      | `96`  | Select cyan (7) background    | P1, §2.3.2c, p.58 | ✅  |
+| WHB      | `97`  | Select white (8) background   | P1, §2.3.2c, p.58 | ✅  |
 | CDY      | `98`  | Conceal Display               | P1, §2.3.6, p.62  | ✅  |
 | SPL      | `99`  | Stop lining                   | P1, §2.3.3, p.59  | ✅  |
 | STL      | `9a`  | Start lining                  | P1, §2.3.3, p.59  | ✅  |
