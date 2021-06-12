@@ -222,14 +222,14 @@ The letter `z` designates a single digit from the range `30`-`32`, where `30` is
 
 | Sequence             | Bytes                  | Description                               | References       | OK? |
 | -------------------- | ---------------------- | ----------------------------------------- | ---------------- | --- |
-| CSI *n* 4/0          | `9b` *n* `40`          | CT1-CT4: select color table d (0-3)       | P1, §3.5.6, p.90 | ✅  | 
-| CSI 3/0 4/1          | `9b 30 41`             | IVF: inverted flash                       | P1, §3.5.6, p.91 |     |
-| CSI 3/1 4/1          | `9b 31 41`             | RIF: reduced intensity flash              | P1, §3.5.6, p.91 |     |
-| CSI 3/2 4/1          | `9b 32 41`             | FF1: fast flash 1                         | P1, §3.5.6, p.91 |     |
-| CSI 3/3 4/1          | `9b 33 41`             | FF1: fast flash 2                         | P1, §3.5.6, p.91 |     |
-| CSI 3/4 4/1          | `9b 34 41`             | FF1: fast flash 3                         | P1, §3.5.6, p.91 |     |
-| CSI 3/5 4/1          | `9b 35 41`             | ICF: increment flash                      | P1, §3.5.6, p.91 |     |
-| CSI 3/6 4/1          | `9b 36 41`             | DCF: decrement flash                      | P1, §3.5.6, p.91 |     |
+| CSI *n* 4/0          | `9b` *n* `40`          | CT1-CT4: select color table d (0-3)       | P1, §3.5.6, p.90 | ✅  |
+| CSI 3/0 4/1          | `9b 30 41`             | IVF: inverted flash                       | P1, §3.5.6, p.91 | ✅  |
+| CSI 3/1 4/1          | `9b 31 41`             | RIF: reduced intensity flash              | P1, §3.5.6, p.91 | ✅  |
+| CSI 3/2 4/1          | `9b 32 41`             | FF1: fast flash 1                         | P1, §3.5.6, p.91 | ✅  |
+| CSI 3/3 4/1          | `9b 33 41`             | FF1: fast flash 2                         | P1, §3.5.6, p.91 | ✅  |
+| CSI 3/4 4/1          | `9b 34 41`             | FF1: fast flash 3                         | P1, §3.5.6, p.91 | ✅  |
+| CSI 3/5 4/1          | `9b 35 41`             | ICF: increment flash                      | P1, §3.5.6, p.91 | ✅  |
+| CSI 3/6 4/1          | `9b 36 41`             | DCF: decrement flash                      | P1, §3.5.6, p.91 | ✅  |
 | CSI 4/2              | `9b 42`                | STC: stop conceal (also parallel C1 `9f`) | P1, §3.5.1, p.88 | ✅  |
 | CSI *z* 5/0          | `9b` *z* `50`          | PMS: protected mode start                 | P1, §3.5.3, p.89 |     |
 | CSI *z* 5/1          | `9b` *z* `51`          | PMT: protected mode stop                  | P1, §3.5.3, p.89 |     |

@@ -44,6 +44,7 @@ class CeptAttr {
 
 class CeptScreenRow {
   constructor(colsOrRow) {
+    // FIXME: we need an attr for full row attributes like double height
     if (colsOrRow instanceof CeptScreenRow) {
       this.attr = [];
       this.bg = colsOrRow.bg;
@@ -461,7 +462,7 @@ export default class Cept {
   }
 
   set flashPhase(p) {
-    this.attr.flashp = p;
+    this.attr.flashp = p % 3;
   }
 
   get inverted() {
@@ -522,7 +523,7 @@ export default class Cept {
    * Reset display state. See 3.1 General Display Reset
    */
   reset() {
-    
+
   }
 
   fill(x0, y0, w, h, c) {
@@ -594,7 +595,7 @@ export default class Cept {
     this.forcedUpdate = false;
   }
 
-  write(c) {
+  write(c, serial) {
     // if it is a stand-alone combining diacritical mark, add a space
     if (c.charCodeAt(0) >= 0x300 && c.charCodeAt(0) <= 0x36f) {
       // c = "\u25cc" + c; // small dotted circle
@@ -602,7 +603,8 @@ export default class Cept {
     }
     var x = this.cursor.x;
     var y = this.cursor.y;
-    Object.assign(this.screen.rows[y].attr[x], this.attr);
+    if (!serial)
+      Object.assign(this.screen.rows[y].attr[x], this.attr);
     this.screen.rows[y].attr[x].char = c;
     x += 1;
     if (this.attr.size == Cept.SIZE_DOUBLE_WIDTH

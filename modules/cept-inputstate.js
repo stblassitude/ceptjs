@@ -121,7 +121,7 @@ export default class CeptInputState {
     let u = this.getUnicodeChar(c);
     if (u != -1) {
       this.lastChar = u;
-      this.cept.write(this.lastChar);
+      this.cept.write(this.lastChar, this.c1 == CeptInputState.C1_SERIAL);
       switch (this.gSet[this.inUseCodeTable[c >> 7]]) {
         case CeptInputState.CS_MOSAIC_1:
         case CeptInputState.CS_MOSAIC_2:
@@ -188,6 +188,7 @@ export default class CeptInputState {
           break;
         case 0x0c: // CS
           this.cept.clearScreen();
+          this.cept.move(0, 0);
           break;
         case 0x0d: // APR
           this.cept.moveReturn();
@@ -291,13 +292,13 @@ export default class CeptInputState {
         break;
       case CeptInputState.STATE_ESC_FSFR_SCREEN:
         if (b >= 0x50 && b <= 0x57) {
-          this.cept.screenColor = b - 0x40 + this.clutIndex;
+          this.cept.screenColor = b - 0x50 + this.clutIndex;
         }
         this.state = CeptInputState.STATE_INITIAL;
         break;
       case CeptInputState.STATE_ESC_FSFR_ROW:
         if (b >= 0x50 && b <= 0x57) {
-          this.cept.screen.rows[this.cept.cursor.y].bg = b - 0x40 + this.clutIndex;
+          this.cept.screen.rows[this.cept.cursor.y].bg = b - 0x50 + this.clutIndex;
         }
         for (let x = 0; x < this.cept.cols; x++) {
           let attr = this.cept.screen.rows[this.cept.cursor.y].attr[x];
@@ -358,6 +359,34 @@ export default class CeptInputState {
         switch (b) {
         case 0x40: // select color table
           this.clutIndex = this.csiParams[0] * 8;
+          break;
+        case 0x41:
+          switch(this.csiParams[0]) {
+            case 0: // IVF: inverted flash
+              this.cept.flashInverted = true;
+              break;
+            case 1: // RIF: reduced intensity flash
+              this.cept.flashReducedIntensity = true;
+              break;
+            case 2: // FF1: fast flash 1
+              this.cept.flashMode = Cept.FLASH_MODE_FAST;
+              this.cept.flashPhase = 0;
+              break;
+            case 3: // FF2: fast flash 2
+              this.cept.flashMode = Cept.FLASH_MODE_FAST;
+              this.cept.flashPhase = 1;
+              break;
+            case 4: // FF3: fast flash 3
+              this.cept.flashMode = Cept.FLASH_MODE_FAST;
+              this.cept.flashPhase = 2;
+              break;
+            case 5: // ICF: increment flash
+              this.cept.flashPhase += 1;
+              break;
+            case 3: // DCF: increment flash
+              this.cept.flashPhase -= 1;
+              break;
+          }
           break;
         case 0x42: // STC Serial Control Stop Conceal, 3.5.1
           this.cept.serialControl(attr => {
@@ -471,9 +500,15 @@ export default class CeptInputState {
       switch (b) {
         case 0x48: // FSH: flash, 2.3.5
           attr.flashf = Cept.FLASH_MODE_FLASH;
+          attr.flashi = false;
+          attr.flashp = 0;
+          attr.flashr = false;
           break;
         case 0x49: // STD: steady, 2.3.5
           attr.flashf = Cept.FLASH_MODE_STEADY;
+          attr.flashi = false;
+          attr.flashp = 0;
+          attr.flashr = false;
           break;
         case 0x4a: // EBX: start window/box, 2.3.8
           break;
@@ -529,7 +564,7 @@ export default class CeptInputState {
   deactivateL() {
     if (this.lastCodeTable >= 0) {
       // switch back to previously selected G0
-      this.inUseCodeTable[0] = this.lastCodeTable = -1;;
+      this.inUseCodeTable[0] = this.lastCodeTable;
       this.lastCodeTable = -1;
     }
   }
