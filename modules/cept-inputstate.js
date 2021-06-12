@@ -346,6 +346,12 @@ export default class CeptInputState {
 
   handleCsi(b) {
     switch (b) {
+      case 0x42: // STC Serial Control Stop Conceal, 3.5.1
+        this.cept.serialControl(attr => {
+          attr.concealed = false;
+        });
+        this.state = STATE_INITIAL;
+        break;
       default:
         this.state = STATE_INITIAL;
     }
@@ -384,11 +390,6 @@ export default class CeptInputState {
         this.applyParallelSuppCtrl(b, this.cept.attr);
       }
     } else switch (b) {
-      case 0x42: // STC Serial Control Stop Conceal, 3.5.1
-        this.cept.serialControl(attr => {
-          attr.concealed = false;
-        })
-        break;
       default:
         break;
     }
