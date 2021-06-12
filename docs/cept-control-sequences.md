@@ -55,7 +55,7 @@ The code points are defined in part 1, section 3.2, on page 75. The definitions 
 | APR       | `0d`                     | Move cursor to beginning of line (aka carriage return) | P1, §2.2, p.49   | ✅  |
 | SO        | `0e`                     | Shift Out, activate G2 in 20-7f                        | P1, §3.1.2, p.72 | ✅  |
 | SI        | `0f`                     | Shift In, activate G0 in 20-7f                         | P1, §3.1.2, p.72 | ✅  |
-| CON       | `11`                     | Cursor on, do display cursor                           | P1, §2.4.1, p.68 | ✅  | 
+| CON       | `11`                     | Cursor on, do display cursor                           | P1, §2.4.1, p.68 | ✅  |
 | RPT *n*   | `12` `40`-`7f`           | Repeat the last alpha character *n*-`40` times         |                  | ✅  |
 | COF       | `14`                     | Cursor off, do not display cursor                      | P1, §2.4.1, p.68 | ✅  |
 | CAN       | `18`                     | Cancel, fill the rest of the line with spaces          | P1, §2.2, p.49   | ✅  |
@@ -222,7 +222,7 @@ The letter `z` designates a single digit from the range `30`-`32`, where `30` is
 
 | Sequence             | Bytes                  | Description                               | References       | OK? |
 | -------------------- | ---------------------- | ----------------------------------------- | ---------------- | --- |
-| CSI *n* 4/0          | `9b` *n* `40`          | CT1: select color table d (0-3)           | P1, §3.5.6, p.90 |     |
+| CSI *n* 4/0          | `9b` *n* `40`          | CT1-CT4: select color table d (0-3)       | P1, §3.5.6, p.90 | ✅  | 
 | CSI 3/0 4/1          | `9b 30 41`             | IVF: inverted flash                       | P1, §3.5.6, p.91 |     |
 | CSI 3/1 4/1          | `9b 31 41`             | RIF: reduced intensity flash              | P1, §3.5.6, p.91 |     |
 | CSI 3/2 4/1          | `9b 32 41`             | FF1: fast flash 1                         | P1, §3.5.6, p.91 |     |

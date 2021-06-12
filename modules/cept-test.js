@@ -396,6 +396,8 @@ export default class CeptTest {
       0x96, // MSC
       0x9f, 0x97, // HMR, MSW
       0x39, // mosaic
+      0x9b, 0x31, 0x40, // CT2
+      0x97, 0x3a, // MSW, mosaic
     ];
     let i = 0;
     i = window.setInterval(e => {

@@ -81,6 +81,7 @@ export default class CeptInputState {
     this.c1 = CeptInputState.C1_SERIAL;
     this.holdMosaic = false; // in serial C1, print last mosaic instead of space
     this.lastMosaic = " "; // if holdMosaic, print this when processing C1
+    this.csiParams = [];
   }
 
   /**
@@ -347,15 +348,24 @@ export default class CeptInputState {
   }
 
   handleCsi(b) {
-    switch (b) {
-      case 0x42: // STC Serial Control Stop Conceal, 3.5.1
-        this.cept.serialControl(attr => {
-          attr.concealed = false;
-        });
-        this.state = STATE_INITIAL;
-        break;
-      default:
-        this.state = STATE_INITIAL;
+    if (b >= 0x30 && b <= 0x39) {
+      // add to current param
+      this.csiParams[this.csiParams.length - 1] = this.csiParams[this.csiParams.length - 1] * 10 + b - 0x30;
+    } else if (b == 0x3b) {
+      // another param
+      this.csiParams.push(0);
+    } else {
+        switch (b) {
+        case 0x40: // select color table
+          this.clutIndex = this.csiParams[0] * 8;
+          break;
+        case 0x42: // STC Serial Control Stop Conceal, 3.5.1
+          this.cept.serialControl(attr => {
+            attr.concealed = false;
+          });
+          break;
+      }
+      this.state = CeptInputState.STATE_INITIAL;
     }
   }
 
@@ -365,9 +375,9 @@ export default class CeptInputState {
       b -= 0x40; // C1 is defined as 4/0 to 5/15
       if (this.c1 == CeptInputState.C1_SERIAL) {
         if (b == 0x5b) {
-          this.state = STATE_CSI;
-        }
-        if (b == 0x5e) {
+          this.state = CeptInputState.STATE_CSI;
+          this.csiParams = [ 0 ];
+        } else if (b == 0x5e) {
           this.holdMosaic = true;
         } else if (b == 0x5f) {
           this.holdMosaic = false;
@@ -389,7 +399,12 @@ export default class CeptInputState {
         }
         this.cept._limitCursor();
       } else if (this.c1 == CeptInputState.C1_PARALLEL) {
-        this.applyParallelSuppCtrl(b, this.cept.attr);
+        if (b == 0x5b) {
+          this.state = CeptInputState.STATE_CSI;
+          this.csiParams = [ 0 ];
+        } else {
+          this.applyParallelSuppCtrl(b, this.cept.attr);
+        }
       }
     } else switch (b) {
       default:
@@ -486,7 +501,6 @@ export default class CeptInputState {
           attr.underline = true;
           break;
         case 0x5b: // CSI
-          this.state = STATE_CSI;
           break;
         case 0x5c: // NPO: normal polarity, 2.3.7
           attr.inv = false;
@@ -565,7 +579,6 @@ export default class CeptInputState {
           attr.underline = true;
           break;
         case 0x5b: // CSI
-          this.state = STATE_CSI;
           break;
         case 0x5c: // BBD: black backgrund, 2.3.2
           attr.bg = 0;
