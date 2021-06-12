@@ -1,21 +1,57 @@
 <html>
+
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <title>CEPT.js</title>
   <link href="cept.css" rel="stylesheet">
   <script src="./testing.js" type="module"></script>
   <style>
-  #screen {
-    font-family: "Fairfax HD", Courier, monospace;
-    // font-family: "ModeSeven", Courier, monospace;
-    // font-family: "European Teletext", Courier, monospace;
-    // font-family: "Galax Teletext", Courier, monospace;
-  }
+    #terminal {
+      display: flex;
+    }
+
+    #screen {
+      font-family: "Fairfax HD", Courier, monospace;
+      // font-family: "ModeSeven", Courier, monospace;
+      // font-family: "European Teletext", Courier, monospace;
+      // font-family: "Galax Teletext", Courier, monospace;
+      margin-right: calc(0.5*40em);
+    }
+
+    #log {
+      border: 1px solid grey;
+      margin: 5px;
+      padding: 5px;
+      overflow-y: scroll;
+      max-height: 27em;
+      flex-grow: 1;
+    }
+
+    #log .hex, #log .sym  {
+      padding: 1px 4px;
+      margin: 2px;
+      background-color: #ddd;
+      display: inline-block;
+      border: 1px solid black;
+      border-radius: 4px;
+      font-family: Courier, monospace;
+    }
+
+    #log .sym {
+      background-color: #dd8;
+      white-space: pre;
+    }
+
   </style>
 </head>
+
 <body>
   <h1>cept.js</h1>
-  <div id="screen" style="background: url(walking.gif);"></div>
+  <div id="terminal">
+    <div id="screen" style="background: url(walking.gif);"></div>
+    <div id="log">
+    </div>
+  </div>
   <div id="controls">
     <button id="charsAndColors">Chars &amp; Colors</button>
     <button id="attrs">Attrs</button>
@@ -27,4 +63,5 @@
     <button id="reveal">Reveal</button>
   </div>
 </body>
+
 </html>

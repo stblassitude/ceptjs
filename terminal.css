@@ -14,6 +14,7 @@
 
 .keyboard-row {
   /*display: inline-block*/
+  min-width: 10em;
 }
 
 #keyboard button {
@@ -29,4 +30,28 @@ button#keyboard-dial, button#keyboard-dct {
   border: 1px solid grey;
   border-radius: 0.3em;
   padding: 0 0.5em;
+}
+
+#log {
+  border: 1px solid grey;
+  margin: 5px;
+  padding: 5px;
+  overflow-y: scroll;
+  max-height: 27em;
+  flex-grow: 1;
+}
+
+#log .hex, #log .sym  {
+  padding: 1px;
+  margin: 2px 4px;
+  background-color: #ddd;
+  display: inline-block;
+  border: 1px solid black;
+  border-radius: 4px;
+  font-family: Courier, monospace;
+}
+
+#log .sym {
+  background-color: #dd8;
+  white-space: pre;
 }

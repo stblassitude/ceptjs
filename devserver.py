@@ -17,6 +17,7 @@ async def websocket_handler(request):
 
     ws = web.WebSocketResponse()
     await ws.prepare(request)
+    print('opening connection')
     reader, writer = await asyncio.open_connection(
         '195.201.94.166', 20000)
 

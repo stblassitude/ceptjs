@@ -117,6 +117,7 @@ export default class Cept {
     } else {
       throw "Need to specify element or selector";
     }
+    this.elements.log = options.log;
 
     this.rows = 25;
     this.cols = 40;
@@ -180,6 +181,18 @@ export default class Cept {
 
     // do this last so no interval is running unless initialization was successful
     window.setInterval(this._flashInterval.bind(this), 1000/6);
+    this._log("<span class='sym'>initialized</span>");
+  }
+
+  _log(m) {
+    if (this.elements.log === undefined)
+      return;
+    let l = document.createElement("div");
+    // let t = document.createTextNode(m);
+    this.elements.log.appendChild(l);
+    l.className = "cept-log";
+    l.innerHTML = m;
+    // l.appendChild(t);
   }
 
   _randomId() {
@@ -359,6 +372,10 @@ export default class Cept {
     this.cursor.y %= this.rows;
     if (this.cursor.y < 0)
       this.cursor.y = this.rows - this.cursor.y;
+  }
+
+  init(rows, cols) {
+    // FIXME: move (re-)initialization down from constructor
   }
 
   resetClut() {

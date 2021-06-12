@@ -2,7 +2,9 @@ import Cept from './modules/cept.js';
 import CeptTest from './modules/cept-test.js';
 
 window.addEventListener('DOMContentLoaded', (event) => {
-  let cept = new Cept("#screen");
+  let cept = new Cept("#screen", {
+    log: document.getElementById("log"),
+  });
   let ceptTest = new CeptTest(cept);
 
   document.getElementById("charsAndColors").addEventListener("click", function(ev) {

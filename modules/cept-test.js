@@ -374,6 +374,7 @@ export default class CeptTest {
     let bytes = [];
 
     bytes = bytes.concat([
+      0x1f, 0x2d,
       0x0c, 0x14, // CS, COF
       0x1b, 0x22, 0x41, // ESC 2/2 4/1, switch to parallel C1
       0x9b, 0x31, 0x40, // CT2
