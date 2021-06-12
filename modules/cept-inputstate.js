@@ -36,8 +36,28 @@ export default class CeptInputState {
   static C1_SERIAL = 1;
   static C1_PARALLEL = 2;
 
-  constructor (cept) {
+  static CS_PRIMARY = 0;
+  static CS_SUPPLEMENTARY = 1;
+  static CS_GREEK = 2;
+  static CS_MOSAIC_1 = 3;
+  static CS_MOSAIC_2 = 4;
+  static CS_MOSAIC_3 = 5;
+
+  static CODESETS = [
+    CeptCodeSets.PRIMARY,
+    CeptCodeSets.SUPPLEMENTARY,
+    CeptCodeSets.GREEK,
+    CeptCodeSets.SUPP_MOSAIC_1,
+    CeptCodeSets.SUPP_MOSAIC_2,
+    CeptCodeSets.SUPP_MOSAIC_3,
+  ];
+
+  constructor(cept) {
     this.cept = cept;
+    this.reset();
+  }
+
+  reset() {
     this.state = CeptInputState.STATE_INITIAL;
     this.apaState = CeptInputState.STATE_APA_B0;
     this.escState = CeptInputState.STATE_ESC_INITIAL;
@@ -49,25 +69,57 @@ export default class CeptInputState {
     // default code sets, see section 3.1.4
     this.inUseCodeTable = [ 0, 2 ];
     this.lastCodeTable = -1;  // which G set to switch back to when returning from the L set
-    this.gSet = [
-      CeptCodeSets.PRIMARY,
-      CeptCodeSets.SUPP_MOSAIC_2,
-      CeptCodeSets.SUPPLEMENTARY,
-      CeptCodeSets.SUPP_MOSAIC_3,
-      CeptCodeSets.SUPP_MOSAIC_1, // we cheat by using this position for the L set by setting inUseCodeTable[0] = 4
+    this.gSet = [ // designation of code sets into G sets
+      CeptInputState.CS_PRIMARY,
+      CeptInputState.CS_MOSAIC_2,
+      CeptInputState.CS_SUPPLEMENTARY,
+      CeptInputState.CS_MOSAIC_3,
+      CeptInputState.CS_MOSAIC_1, // we cheat by using this position for the L set by setting inUseCodeTable[0] = 4
     ];
     this.clutIndex = 0; // index offset for CLUT in use, ie. 8 for the second CLUT
-    this.combining = 0x00; // saved combining char
+    this.combining = ""; // saved unicode combining char
     this.c1 = CeptInputState.C1_SERIAL;
   }
 
-  reset() {
-
+  /**
+   * Decode character byte c from the sets currently in effect, taking
+   * combining characters into account. When encountering a combining character
+   * as the beginning of a combining pair, save it and return -1.
+   * FIXME: we need to check if the combining pair is valid, and emit two
+   * single spacing characters instead if not.
+   */
+  getUnicodeChar(c) {
+    let lr = c >> 7;
+    let g = this.gSet[this.inUseCodeTable[lr]];
+    c = c & 0x7f;
+    if (c < 0x20)
+      return -1;
+    c -= 0x20; // codeset arrays start at 0x20
+    if (g == CeptInputState.CS_SUPPLEMENTARY && c >= 0x20 && c <= 0x2f) {
+      // combining diacritical
+      if (this.combining != "") {
+        // last byte was combining already, emit standalone spacing character and save current combining
+        let u = "\u00a0" + this.combining;
+        this.combining = CeptInputState.CODESETS[g][c];
+        return u;
+      }
+      this.combining = CeptInputState.CODESETS[g][c];
+      return -1;
+    }
+    if (this.combining != "") {
+      let u = CeptInputState.CODESETS[g][c] + this.combining;
+      this.combining = "";
+      return u;
+    }
+    return CeptInputState.CODESETS[g][c];
   }
 
   writeCharacter(c) {
-    this.lastChar = this.gSet[this.inUseCodeTable[c >> 7]][(c & 0x7f) - 0x20];
-    this.cept.write(this.lastChar);
+    let u = this.getUnicodeChar(c);
+    if (u != -1) {
+      this.lastChar = u;
+      this.cept.write(this.lastChar);
+    }
   }
 
   nextByte(b) {
@@ -95,6 +147,7 @@ export default class CeptInputState {
         break;
       case CeptInputState.STATE_GENERAL_DISPLAY_RESET:
         this.cept.reset();
+        this.reset();
         if (b == 0x41) {
           this.c1 = CeptInputState.C1_SERIAL;
         } else if (b == 0x42) {
@@ -175,7 +228,6 @@ export default class CeptInputState {
     } else if (b >= 0x80 && (b < 0xa0)) {
       this.handleC1(b);
     } else {
-      // detect combining diacritics here
       if (this.singleShift != CeptInputState.SINGLE_SHIFT_NONE) {
         let lastSet = this.cept.inUseCodeTable[0];
         this.inUseCodeTable[0] = this.singleShift;
@@ -249,17 +301,21 @@ export default class CeptInputState {
             this.escState = CeptInputState.STATE_ESC_DESIGNATION_GC_EXT;
             break;
           case 0x40:
-            this.gSet[this.gsDesignation] = CeptCodeSets.PRIMARY;
+            this.gSet[this.gsDesignation] = CeptInputState.CS_PRIMARY;
             this.state = CeptInputState.STATE_INITIAL;
+            break;
           case 0x63:
-            this.gSet[this.gsDesignation] = CeptCodeSets.SUPP_MOSAIC_2;
+            this.gSet[this.gsDesignation] = CeptInputState.CS_MOSAIC_2;
             this.state = CeptInputState.STATE_INITIAL;
+            break;
           case 0x62:
-            this.gSet[this.gsDesignation] = CeptCodeSets.SUPPLEMENTARY;
+            this.gSet[this.gsDesignation] = CeptInputState.CS_SUPPLEMENTARY;
             this.state = CeptInputState.STATE_INITIAL;
+            break;
           case 0x64:
-            this.gSet[this.gsDesignation] = CeptCodeSets.SUPP_MOSAIC_3;
+            this.gSet[this.gsDesignation] = CeptInputState.CS_MOSAIC_3;
             this.state = CeptInputState.STATE_INITIAL;
+            break;
           default:
             this.state = CeptInputState.STATE_INITIAL;
         }
@@ -267,8 +323,9 @@ export default class CeptInputState {
       case CeptInputState.STATE_ESC_DESIGNATION_GC_EXT:
         switch (b) {
           case 0x40:
-            this.gSet[this.gsDesignation] = CeptCodeSets.GREEK;
+            this.gSet[this.gsDesignation] = CeptInputState.GREEK;
             this.state = CeptInputState.STATE_INITIAL;
+            break;
           default:
             this.state = CeptInputState.STATE_INITIAL;
         }

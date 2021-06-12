@@ -389,7 +389,8 @@ export default class CeptTest {
       0x0d, 0x0a,
       0x1b, 0x22, 0x40, // ESC 2/2 4/0, switch to serial C1
       0x84, 0x08, 0x9d, 0x08, 0x83, 0x08, // ANB, APB, NBD, APB, ANY, APB
-      0x67, "f"
+      0x67, // "f"
+      0x20, 0xc8, 0x75, // SPC, umlaut, "u"
     ];
     let i = 0;
     i = window.setInterval(e => {
