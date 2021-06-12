@@ -45,30 +45,30 @@ The US control character is encoded as hex `1f` and shares the code with the Act
 
 The code points are defined in part 1, section 3.2, on page 75. The definitions are mostly in section 2.
 
-| Sequence  | Bytes                    | Description                                            | References     | OK? |
-| --------- | ------------------------ | ------------------------------------------------------ | -------------- | --- |
-| APB       | `08`                     | Move cursor left (aka backspace)                       | P1, §2.2, p.49 | ✅  |
-| APF       | `09`                     | Move cursor right                                      | P1, §2.2, p.49 | ✅  |
-| APD       | `0a`                     | Move cursor down (aka line feed)                       | P1, §2.2, p.49 | ✅  |
-| APU       | `0b`                     | Move cursor up                                         | P1, §2.2, p.49 | ✅  |
-| CS        | `0c`                     | Clear screen                                           | P1, §2.2, p.49 | ✅  |
-| APR       | `0d`                     | Move cursor to beginning of line (aka carriage return) | P1, §2.2, p.49 | ✅  |
-| SO        | `0e`                     | Shift Out, activate G2 in 20-7f                        |                | ✅  |
-| SI        | `0f`                     | Shift In, activate G0 in 20-7f                         |                | ✅  |
-| CON       | `11`                     |                                                        |                |     |
-| RPT *n*   | `12` `40`-`7f`           | Repeat the last alpha character *n*-`40` times         |                | ✅  |
-| COF       | `14`                     |                                                        |                |     |
-| CAN       | `18`                     | Cancel, fill the rest of the line with spaces          | P1, §2.2, p.49 | ✅  |
-| SS2       | `19`                     | Single Shift 2, activate G2 in 20-7f for one char      |                | ✅  |
-| ESC       | `1b`                     | Escape, see below                                      |                | ✅  |
-| SS3       | `1d`                     | Single Shift 3, activate G3 in 20-7f for one char      |                | ✅  |
-| APH       | `1e`                     | Move cursor to (1,1)                                   | P1, §2.2, p.49 | ✅  |
-| APA *y x* | `1f` `40`-`7f` `40`-`7f` | Move cursor to *y*-`40`, *x*-`40`                      | P1, §2.2, p.49 | ✅  |
-| US ...    | `1f` ...                 | See VPCE below                                         |                | ✅  |
-| ...       | `20`-`7e`                | Print character as per selected set                    |                | ✅  |
-| DEL       | `7f`                     | Print DEL char (alpha) or all-foreground (mosaic)      |                |     |
-|           | `80`-`9f`                | C1 set, see below                                      |                | ✅  |
-| ...       | `a0`-`ff`                | Print character as per selected set                    |                | ✅  |
+| Sequence  | Bytes                    | Description                                            | References       | OK? |
+| --------- | ------------------------ | ------------------------------------------------------ | ---------------- | --- |
+| APB       | `08`                     | Move cursor left (aka backspace)                       | P1, §2.2, p.49   | ✅  |
+| APF       | `09`                     | Move cursor right                                      | P1, §2.2, p.49   | ✅  |
+| APD       | `0a`                     | Move cursor down (aka line feed)                       | P1, §2.2, p.49   | ✅  |
+| APU       | `0b`                     | Move cursor up                                         | P1, §2.2, p.49   | ✅  |
+| CS        | `0c`                     | Clear screen                                           | P1, §2.2, p.49   | ✅  |
+| APR       | `0d`                     | Move cursor to beginning of line (aka carriage return) | P1, §2.2, p.49   | ✅  |
+| SO        | `0e`                     | Shift Out, activate G2 in 20-7f                        | P1, §3.1.2, p.72 | ✅  |
+| SI        | `0f`                     | Shift In, activate G0 in 20-7f                         | P1, §3.1.2, p.72 | ✅  |
+| CON       | `11`                     | Cursor on, do display cursor                           | P1, §2.4.1, p.68 | ✅  | 
+| RPT *n*   | `12` `40`-`7f`           | Repeat the last alpha character *n*-`40` times         |                  | ✅  |
+| COF       | `14`                     | Cursor off, do not display cursor                      | P1, §2.4.1, p.68 | ✅  |
+| CAN       | `18`                     | Cancel, fill the rest of the line with spaces          | P1, §2.2, p.49   | ✅  |
+| SS2       | `19`                     | Single Shift 2, activate G2 in 20-7f for one char      | P1, §3.1.2, p.72 | ✅  |
+| ESC       | `1b`                     | Escape, see below                                      | P1, §3.1.2, p.72 | ✅  |
+| SS3       | `1d`                     | Single Shift 3, activate G3 in 20-7f for one char      |                  | ✅  |
+| APH       | `1e`                     | Move cursor to (1,1)                                   | P1, §2.2, p.49   | ✅  |
+| APA *y x* | `1f` `40`-`7f` `40`-`7f` | Move cursor to *y*-`40`, *x*-`40`                      | P1, §2.2, p.49   | ✅  |
+| US ...    | `1f` ...                 | See VPCE below                                         |                  | ✅  |
+| ...       | `20`-`7e`                | Print character as per selected set                    |                  | ✅  |
+| DEL       | `7f`                     | Print DEL char (alpha) or all-foreground (mosaic)      | P1, §2.2, p.50   | ✅  |
+|           | `80`-`9f`                | C1 set, see below                                      |                  | ✅  |
+| ...       | `a0`-`ff`                | Print character as per selected set                    |                  | ✅  |
 
 
 ## The Serial Supplementary Control Function Set C1
@@ -116,8 +116,8 @@ The code points are defined in Part 1, §3.3.1, page 77. For descriptions of the
 | CSI      | `9b`  | "Second Escape", see below                            |                   | ✅  |
 | BBD      | `9c`  | Black background                                      | P1, §2.3.2, p.57  | ✅  |
 | NBD      | `9d`  | New background, copies fg to bg color                 | P1, §2.3.2, p.57  | ✅  |
-| HMS      | `9e`  | Hold mosaic: print last mosaic on receiving serial C1 | P1, §2.2, p.50    |     |
-| RMS      | `9f`  | Release mosaic: print space on receiving serial C1    | P1, §2.2, p.50    |     |
+| HMS      | `9e`  | Hold mosaic: print last mosaic on receiving serial C1 | P1, §2.2, p.50    | ✅  |
+| RMS      | `9f`  | Release mosaic: print space on receiving serial C1    | P1, §2.2, p.50    | ✅  |
 
 ## The Parallel Supplementary Control Function Set C1
 
@@ -159,8 +159,8 @@ The parallel attribute definitions are also used for full screen and full row at
 | CSI      | `9b`  | "Second Escape", see below    |                   | ✅  |
 | NPO      | `9c`  | Normal polarity               | P1, §2.3.7, p.62  | ✅  |
 | IPO      | `9d`  | Inverted polarity             | P1, §2.3.7, p.62  | ✅  |
-| TRB      | `9e`  | Transparent background        | P1, §2.3.2c, p.58 |     |
-| STC      | `9f`  | Stop conceal (also `CSI 4/2`) | P1, §2.3.7, p.62  |     |
+| TRB      | `9e`  | Transparent background        | P1, §2.3.2c, p.58 | ✅  |
+| STC      | `9f`  | Stop conceal (also `CSI 4/2`) | P1, §2.3.7, p.62  | ✅  |
 
 ## Escape Sequences
 

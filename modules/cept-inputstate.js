@@ -200,12 +200,14 @@ export default class CeptInputState {
           this.cept.inUseCodeTable[0] = 0;
           this.deactivateL();
           break;
-        case 0x11: // CON
+        case 0x11: // CON: cursor on
+          this.cept.cursor.visible = true;
           break;
         case 0x12: // RPT
           this.state = CeptInputState.STATE_RPT;
           break;
-        case 0x14: // COF
+        case 0x14: // COF: cursor off
+          this.cept.cursor.visible = false;
           break;
         case 0x18: // CAN
           for (let x = this.cept.cursor.x; x < this.cept.cols; x++) {
