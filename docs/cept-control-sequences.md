@@ -17,7 +17,9 @@ The column "OK?" indicates whether this sequence is supported in cept.js.
 
 ## APA vs. US and Data Types
 
-The standard is grouped into functional blocks (see part 0, §1.1.1, page 2), where each functional block has its own two byte prefix. The following table lists these prefixes. The US control character is encoded as hex `1f` and shares the code with the Active Position Adress (APA) control sequence. The second byte of the sequence can be used to distinguish between the two cases.
+The standard is grouped into functional blocks (see part 0, §1.1.1, page 2), where each functional block has its own two byte prefix. The following table lists these prefixes. Each sequence switches the terminal between functional modes.
+
+The US control character is encoded as hex `1f` and shares the code with the Active Position Address (APA) control sequence. The second byte of the sequence can be used to distinguish between the two cases.
 
 | Sequence    | Bytes                    | Description                       | References     | OK? |
 | ----------- | ------------------------ | --------------------------------- | -------------- | --- |
