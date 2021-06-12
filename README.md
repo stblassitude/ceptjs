@@ -2,11 +2,17 @@
 
 A terminal emulator compliant with ETS 300 072
 
-## Running A Local Webserver
+## Running The Local Webserver
 
 ```
-python3 -m http.server
+pipenv --python 3
+pipenv install
+pipenv run ./devserver.py
 ```
+
+The standard terminal is available as [localhost:8080/web/index.html](http://localhost:8080/web/index.html).
+
+A testing setup is available at [localhost:8080/web/testing.html](http://localhost:8080/web/testing.html).
 
 ## Fonts
 
