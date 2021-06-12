@@ -79,6 +79,8 @@ export default class CeptInputState {
     this.clutIndex = 0; // index offset for CLUT in use, ie. 8 for the second CLUT
     this.combining = ""; // saved unicode combining char
     this.c1 = CeptInputState.C1_SERIAL;
+    this.holdMosaic = false; // in serial C1, print last mosaic instead of space
+    this.lastMosaic = " "; // if holdMosaic, print this when processing C1
   }
 
   /**
@@ -119,6 +121,12 @@ export default class CeptInputState {
     if (u != -1) {
       this.lastChar = u;
       this.cept.write(this.lastChar);
+      switch (this.gSet[this.inUseCodeTable[c >> 7]]) {
+        case CeptInputState.CS_MOSAIC_1:
+        case CeptInputState.CS_MOSAIC_2:
+        case CeptInputState.CS_MOSAIC_3:
+          this.lastMosaic = u;
+      }
     }
   }
 
@@ -348,17 +356,24 @@ export default class CeptInputState {
       // supplementary control function, 3.3
       b -= 0x40; // C1 is defined as 4/0 to 5/15
       if (this.c1 == CeptInputState.C1_SERIAL) {
-        // apply from current position to the next marker or end of the line
-        this.applySerialSuppCtrl(b, this.cept.attr);
-        let attr = this.cept.screen.rows[this.cept.cursor.y].attr[this.cept.cursor.x];
-        this.applySerialSuppCtrl(b, attr);
-        attr.marked = true;
-        if (++this.cept.cursor.x < this.cept.cols) {
-          for (var x = this.cept.cursor.x; x < this.cept.cols; x++) {
-            let attr = this.cept.screen.rows[this.cept.cursor.y].attr[x];
-            if (attr.marked)
-              break;
-            this.applySerialSuppCtrl(b, attr);
+        if (b == 0x5e) {
+          this.holdMosaic = true;
+        } else if (b == 0x5f) {
+          this.holdMosaic = false;
+        } else {
+          // apply from current position to the next marker or end of the line
+          this.applySerialSuppCtrl(b, this.cept.attr);
+          let attr = this.cept.screen.rows[this.cept.cursor.y].attr[this.cept.cursor.x];
+          this.applySerialSuppCtrl(b, attr);
+          attr.marked = true;
+          attr.char = this.holdMosaic ? this.lastMosaic : " ";
+          if (++this.cept.cursor.x < this.cept.cols) {
+            for (var x = this.cept.cursor.x; x < this.cept.cols; x++) {
+              let attr = this.cept.screen.rows[this.cept.cursor.y].attr[x];
+              if (attr.marked)
+                break;
+              this.applySerialSuppCtrl(b, attr);
+            }
           }
         }
         this.cept._limitCursor();
@@ -509,7 +524,7 @@ export default class CeptInputState {
       this.deactivateL();
     } else if (b >= 0x50 && b <= 0x57) {
       attr.fg = b - 0x50 + this.clutIndex;
-      this.activateL
+      this.activateL();
     } else {
       switch (b) {
         case 0x48: // FSH: flash, 2.3.5
