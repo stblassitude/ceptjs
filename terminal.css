@@ -1,0 +1,32 @@
+#terminal {
+  display: flex;
+}
+
+#screen {
+  font-family: "Fairfax HD", Courier, monospace;
+  margin-right: calc(0.5*40em);
+}
+
+#keyboard {
+  text-align: center;
+  margin-left: 20px;
+}
+
+.keyboard-row {
+  /*display: inline-block*/
+}
+
+#keyboard button {
+  width: 2em;
+  font-size: 24px;
+}
+
+button#keyboard-dial, button#keyboard-dct {
+  width: 3em;
+}
+
+.key {
+  border: 1px solid grey;
+  border-radius: 0.3em;
+  padding: 0 0.5em;
+}

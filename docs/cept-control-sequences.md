@@ -57,10 +57,13 @@ The code points are defined in part 1, section 3.2, on page 75. The definitions 
 | SI        | `0f`                     | Shift In, activate G0 in 20-7f                         | P1, §3.1.2, p.72 | ✅  |
 | CON       | `11`                     | Cursor on, do display cursor                           | P1, §2.4.1, p.68 | ✅  |
 | RPT *n*   | `12` `40`-`7f`           | Repeat the last alpha character *n*-`40` times         |                  | ✅  |
+| INI       | `13`                     |                                                        |                  |     |
 | COF       | `14`                     | Cursor off, do not display cursor                      | P1, §2.4.1, p.68 | ✅  |
 | CAN       | `18`                     | Cancel, fill the rest of the line with spaces          | P1, §2.2, p.49   | ✅  |
 | SS2       | `19`                     | Single Shift 2, activate G2 in 20-7f for one char      | P1, §3.1.2, p.72 | ✅  |
+| DCT       | `1a`                     |                                                        |                  |     |
 | ESC       | `1b`                     | Escape, see below                                      | P1, §3.1.2, p.72 | ✅  |
+| TER       | `1c`                     |                                                        |                  |     |
 | SS3       | `1d`                     | Single Shift 3, activate G3 in 20-7f for one char      |                  | ✅  |
 | APH       | `1e`                     | Move cursor to (1,1)                                   | P1, §2.2, p.49   | ✅  |
 | APA *y x* | `1f` `40`-`7f` `40`-`7f` | Move cursor to *y*-`40`, *x*-`40`                      | P1, §2.2, p.49   | ✅  |
