@@ -39,16 +39,33 @@ button#keyboard-dial, button#keyboard-dct {
   overflow-y: scroll;
   max-height: 27em;
   flex-grow: 1;
+  counter-reset: line;
 }
 
-#log .hex, #log .sym  {
-  padding: 1px;
+#log .cept-log {
+  counter-increment: line;
+}
+
+#log .cept-log::before {
+  content: counter(line);
+  display: inline-block;
+  width: 1.5em; /* Fixed width */
+  border-right: 1px solid #ddd;
+  padding: 0 .5em;
+  margin-right: .5em;
+  color: #888;
+  -webkit-user-select: none;
+}
+
+#log .hex, #log .sym {
+  padding: 1px 4px;
   margin: 2px 4px;
   background-color: #ddd;
   display: inline-block;
   border: 1px solid black;
   border-radius: 4px;
   font-family: Courier, monospace;
+  font-size: 10pt;
 }
 
 #log .sym {
