@@ -24,39 +24,41 @@ The US control character is encoded as hex `1f` and shares the code with the Act
 Note that some of the US sequences have optional parameters; the sequence terminates if none of the valid bytes appear. This might require logic to restart processing with the last byte received.
 
 
-| Sequence                       | Bytes                        | Description                             | References     | OK? |
-| ------------------------------ | ---------------------------- | --------------------------------------- | -------------- | --- |
-| US 2/0, 2/1                    | `1f 20` / `1f 21`            | Terminal Facility Identifier            | T/TE 06-05     |     |
-| US 2/3                         | `1f 23`                      | Define DRCS                             | Part 4         |     |
-| US 2/6                         | `1f 26`                      | Define Color                            | Part 5         |     |
-| US 2/13                        | `1f 2d`                      | Define 40x24, with wraparound           | P6, §2, p.1    | ✅  |
-| US 2/13 4/1-4/6                | `1f 2d` `41`-`46`            | Define format, with wraparound          | P6, §2, p.1    | ✅  |
-| US 2/13 4/15 *z* 3/11 *z* 3/11 | `1f 2d 4f` *z* `3b` *z* `3b` | Define format, with wraparound          | P6, §2, p.1    | ✅  |
-| US 2/13 7/0                    | `1f 2d 70`                   | Define 40x24, with wraparound           | P6, §2, p.1    | ✅  |
-| US 2/13 7/1                    | `1f 2d 71`                   | Define 40x24, without wraparound        | P6, §2, p.1    | ✅  |
-| US 2/13 4/1-4/6 7/0            | `1f 2d` `41`-`46` `70`       | Define format, with wraparound          | P6, §2, p.1    | ✅  |
-| US 2/13 4/1-4/6 7/1            | `1f 2d` `41`-`46` `71`       | Define format, without wraparound       | P6, §2, p.1    | ✅  |
-| US 2/13 4/15 … 7/0             | `1f 2d 4f` … `70`            | Define format, with wraparound          | P6, §2, p.1    | ✅  |
-| US 2/13 4/15 … 7/1             | `1f 2d 4f` … `71`            | Define format, without wraparound       | P6, §2, p.1    | ✅  |
-| US 2/14                        | `1f 2e`                      | Timing Control                          | Part 11        |     |
-| US 2/15                        | `1f 2f`                      | Reset                                   | Part 8         |     |
-| US 2/15 4/0 *r*                | `1f 2f 40` *r*               | Service break to row *r*, par. C1       | P8, §3.3, p.3  |     |
-| US 2/15 4/1                    | `1f 2f 41`                   | General display reset, serial C1        | P8, §3.1, p.1  |     |
-| US 2/15 4/2                    | `1f 2f 42`                   | General display reset, parallel C1      | P8, §3.1, p.1  |     |
-| US 2/15 4/3                    | `1f 2f 43`                   | Reset control and graphics set, ser. C1 | P8, §3.2, p.2  |     |
-| US 2/15 4/4                    | `1f 2f 44`                   | Reset control and graphics set, par. C1 | P8, §3.2, p.2  |     |
-| US 2/15 4/5 *r*                | `1f 2f 45` *r*               | Service break to row *r*, ser. C1       | P8, §3.3, p.3  |     |
-| US 2/15 4/15                   | `1f 2f 4f`                   | Service break reset                     | P8, §3.3, p.3  |     |
-| US 3/0                         | `1f 30`                      | Reserved                                |                |     |
-| US 3/1                         | `1f 31`                      | Geometric display data (3D)             | T/TE 06-02     |     |
-| US 3/2                         | `1f 32`                      | Geometric display data (2D)             | T/TE 06-02     |     |
-| US 3/4                         | `1f 34`                      | Photographic pixel data                 |                |     |
-| US 3/5                         | `1f 35`                      | Photographic table data                 |                |     |
-| US 3/11                        | `1f 3b`                      | Sound                                   |                |     |
-| US 3/12                        | `1f 3c`                      | Reserved (private use)                  |                |     |
-| US 3/14                        | `1f 3e`                      | Telesoftware data                       |                |     |
-| US 3/15                        | `1f 3f`                      | Transparent data                        | T/TE 06-03     |     |
-| APA *y x*                      | `1f` `40`-`7f` `40`-`7f`     | Move cursor to *y*-`40`, *x*-`40`       | P1, §2.2, p.49 | ✅  |
+| Sequence                       | Bytes                         | Description                                | References     | OK? |
+| ------------------------------ | ----------------------------- | ------------------------------------------ | -------------- | --- |
+| US 2/0, 2/1                    | `1f 20` / `1f 21`             | Terminal Facility Identifier               | T/TE 06-05     |     |
+| US 2/3                         | `1f 23`                       | Define DRCS                                | Part 4         |     |
+| US 2/3 2/0 2/0-2/9 *z*         | `1f 23 20` `20`-`29` *z*      | Define DRCS Header for registered code *z* | P4, §2.1, p-2  |     |
+| US 2/3 2/0 2/0-2/9 2/0 *z*     | `1f 23 20` `20`-`29` `20` *z* | Define DRCS Header for custom code *z*     | P4, §2.1, p-2  |     |
+| US 2/6                         | `1f 26`                       | Define Color                               | Part 5         |     |
+| US 2/13                        | `1f 2d`                       | Define format 40x24, with wraparound       | P6, §2, p.1    | ✅  |
+| US 2/13 4/1-4/6                | `1f 2d` `41`-`46`             | Define format *n*, with wraparound         | P6, §2, p.1    | ✅  |
+| US 2/13 4/15 *z* 3/11 *z* 3/11 | `1f 2d 4f` *z* `3b` *z* `3b`  | Define format *z*✖️*z*, with wraparound    | P6, §2, p.1    | ✅  |
+| US 2/13 7/0                    | `1f 2d 70`                    | Define format 40x24, with wraparound       | P6, §2, p.1    | ✅  |
+| US 2/13 7/1                    | `1f 2d 71`                    | Define format 40x24, without wraparound    | P6, §2, p.1    | ✅  |
+| US 2/13 4/1-4/6 7/0            | `1f 2d` `41`-`46` `70`        | Define format *n*, with wraparound         | P6, §2, p.1    | ✅  |
+| US 2/13 4/1-4/6 7/1            | `1f 2d` `41`-`46` `71`        | Define format *n*, without wraparound      | P6, §2, p.1    | ✅  |
+| US 2/13 4/15 … 7/0             | `1f 2d 4f` … `70`             | Define format *z*✖️*z*, with wraparound    | P6, §2, p.1    | ✅  |
+| US 2/13 4/15 … 7/1             | `1f 2d 4f` … `71`             | Define format *z*✖️*z*, without wraparound | P6, §2, p.1    | ✅  |
+| US 2/14                        | `1f 2e`                       | Timing Control                             | Part 11        |     |
+| US 2/15                        | `1f 2f`                       | Reset                                      | Part 8         |     |
+| US 2/15 4/0 *r*                | `1f 2f 40` *r*                | Service break to row *r*, par. C1          | P8, §3.3, p.3  |     |
+| US 2/15 4/1                    | `1f 2f 41`                    | General display reset, serial C1           | P8, §3.1, p.1  |     |
+| US 2/15 4/2                    | `1f 2f 42`                    | General display reset, parallel C1         | P8, §3.1, p.1  |     |
+| US 2/15 4/3                    | `1f 2f 43`                    | Reset control and graphics set, ser. C1    | P8, §3.2, p.2  |     |
+| US 2/15 4/4                    | `1f 2f 44`                    | Reset control and graphics set, par. C1    | P8, §3.2, p.2  |     |
+| US 2/15 4/5 *r*                | `1f 2f 45` *r*                | Service break to row *r*, ser. C1          | P8, §3.3, p.3  |     |
+| US 2/15 4/15                   | `1f 2f 4f`                    | Service break reset                        | P8, §3.3, p.3  |     |
+| US 3/0                         | `1f 30`                       | Reserved                                   |                |     |
+| US 3/1                         | `1f 31`                       | Geometric display data (3D)                | T/TE 06-02     |     |
+| US 3/2                         | `1f 32`                       | Geometric display data (2D)                | T/TE 06-02     |     |
+| US 3/4                         | `1f 34`                       | Photographic pixel data                    |                |     |
+| US 3/5                         | `1f 35`                       | Photographic table data                    |                |     |
+| US 3/11                        | `1f 3b`                       | Sound                                      |                |     |
+| US 3/12                        | `1f 3c`                       | Reserved (private use)                     |                |     |
+| US 3/14                        | `1f 3e`                       | Telesoftware data                          |                |     |
+| US 3/15                        | `1f 3f`                       | Transparent data                           | T/TE 06-03     |     |
+| APA *y x*                      | `1f` `40`-`7f` `40`-`7f`      | Move cursor to *y*-`40`, *x*-`40`          | P1, §2.2, p.49 | ✅  |
 
 
 ## Primary Control Function Set C0
@@ -228,7 +230,7 @@ The parallel attribute definitions are also used for full screen and full row at
 | ESC 6/15         | `1b 6f`              | LS3: Locking shift 3, activate G3 in 20-7e        | P1, §3.7.2, p.93 | ✅  |
 | ESC 7/12         | `1b 7c`              | LS3R: Locking shift 3 right, activate G3 in a0-fe | P1, §3.7.2, p.93 | ✅  |
 | ESC 7/13         | `1b 7d`              | LS2R: Locking shift 2 right, activate G2 in a0-fe | P1, §3.7.2, p.93 | ✅  |
-| ESC 7/14         | `1b 7e`              | LS1R: Locking shift 1 right, activate G1 in a0-fe | P1, §3.7.2, p.93 | ✅  | 
+| ESC 7/14         | `1b 7e`              | LS1R: Locking shift 1 right, activate G1 in a0-fe | P1, §3.7.2, p.93 | ✅  |
 
 
 ## Control Sequence Introducer (CSI) Sequences
