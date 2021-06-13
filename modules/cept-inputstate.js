@@ -44,11 +44,14 @@ export default class CeptInputState {
   static STATE_RPT = 1;
   static STATE_ESC = 2;
   static STATE_APA = 3;
-  // static STATE_ = 4;
-  static STATE_CSI = 5;
-  static STATE_GENERAL_DISPLAY_RESET = 6;
-  static STATE_VPDE_DEFINE_FORMAT = 7;
-  static STATE_VPDE_RESET = 8;
+  static STATE_CSI = 4;
+  static STATE_VPDE_TFI = 5;
+  static STATE_VPDE_DEFINE_DRCS = 6;
+  static STATE_VPDE_DEFINE_COLOR = 7;
+  static STATE_VPDE_DEFINE_FORMAT = 8;
+  static STATE_VPDE_TIMING = 9;
+  static STATE_VPDE_RESET = 10;
+  static STATE_VPDE_UNKNOWN = 11;
 
   static STATE_ESC_INITIAL = 0;
   static STATE_ESC_SUPP_CTRL = 1;
@@ -58,10 +61,21 @@ export default class CeptInputState {
   static STATE_ESC_FSFR_SCREEN = 5;
   static STATE_ESC_FSFR_ROW = 6;
 
-  static STATE_US_APA = 0;
+  static STATE_VPDE = 0;
   static STATE_APA_B1 = 1;
   static STATE_APA_B2 = 2;
   static STATE_APA_B3 = 3;
+
+  static STATE_VPDE_DEFINE_DRCS_INITIAL = 0;
+  static STATE_VPDE_DEFINE_DRCS_HEADER = 1;
+  static STATE_VPDE_DEFINE_DRCS_PATTERN = 2;
+  static STATE_VPDE_DEFINE_DRCS_HEADER_ICS_F = 3;
+  static STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC1_PARAMS = 4;
+  static STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC2_PARAMS = 5;
+  static STATE_VPDE_DEFINE_DRCS_HEADER_IDC_SDC2_Q = 6;
+  static STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM = 7;
+  static STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM_ST = 8;
+  static STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SSA = 9;
 
   static STATE_VPDE_DEFINE_FORMAT_INITIAL = 0;
   static STATE_VPDE_DEFINE_FORMAT_PARAMS = 1;
@@ -97,7 +111,7 @@ export default class CeptInputState {
     this.cept = cept;
     this.bytes = [];
     this.state = CeptInputState.STATE_INITIAL;
-    this.apaState = CeptInputState.STATE_US_APA;
+    this.vdpeState = CeptInputState.STATE_VPDE;
     this.escState = CeptInputState.STATE_ESC_INITIAL;
     this.vpdeFormatState = CeptInputState.STATE_VPDE_DEFINE_FORMAT_INITIAL;
     this.vpdeResetState = CeptInputState.STATE_VPDE_RESET_INITIAL;
@@ -107,6 +121,20 @@ export default class CeptInputState {
     this.singleShift = CeptInputState.SINGLE_SHIFT_NONE;
 
     this.savedState = undefined;
+
+    this.drcsDefinition = {
+      repertory: 0,
+      delete: false,
+      char: 0x40,
+      pixelWidth: 12,
+      pixelHeight: 10,
+      cellWidth: 1,
+      cellHeight: 1,
+      bpp: 1,
+      codingType: 0,
+      codingSubType: 0,
+      setAttr: 0,
+    }
 
     this._paramsInit();
     this.debugBytes = [];
@@ -127,17 +155,24 @@ export default class CeptInputState {
   }
 
   /**
-   * Add another parameter to the list, initialized to 0.
-   */
-  _paramsAdd() {
-    this.params.push(0);
-  }
-
-  /**
-   * Add digit to current parameter, multiplying existing value by 10.
+   * Add digit to current parameter, or start a new parameter. To add the
+   * current byte, the existing value is multiplied by 10.
    */
   _paramsAccumulate(b) {
-    this.params[this.params.length - 1] = this.params[this.params.length - 1] * 10 + b - 0x30;
+    if (b >= 0x30 && b <= 0x39) {
+      this.params[this.params.length - 1] = this.params[this.params.length - 1] * 10 + b - 0x30;
+    } else if (b == 0x3b) {
+      this.params.push(0);
+    } else {
+      return false;
+    }
+    return true;
+  }
+
+  _param(i, def) {
+    if (this.params[i] !== undefined)
+      return this.params[i];
+    return def;
   }
 
   reset() {
@@ -204,7 +239,15 @@ export default class CeptInputState {
     this.decoderState = new CeptDecoderState(s.decoder);
   }
 
-  nextLog() {
+  _logNextLine() {
+    if (this.debugBytes.length <= 1)
+      return;
+    let b = this.debugBytes.pop();
+    this._logFinishLine();
+    this.debugBytes.push(b);
+  }
+
+  _logFinishLine() {
     let m = "<span class='hex'>";
     for (let b of this.debugBytes) {
       m += " " + this._hex(b);
@@ -220,7 +263,7 @@ export default class CeptInputState {
 
   nextStateInitial() {
     this.state = CeptInputState.STATE_INITIAL;
-    this.nextLog();
+    this._logFinishLine();
   }
 
   /**
@@ -264,25 +307,22 @@ export default class CeptInputState {
         return this.handleEsc(b);
         break;
       case CeptInputState.STATE_APA:
-        return this.handleApa(b);
+        return this.handleVdpe(b);
         break;
       case CeptInputState.STATE_CSI:
         return this.handleCsi(b);
         break;
-      case CeptInputState.STATE_GENERAL_DISPLAY_RESET:
-        this.cept.reset();
-        this.reset();
-        if (b == 0x41) {
-          this.decoderState.c1 = CeptInputState.C1_SERIAL;
-        } else if (b == 0x42) {
-          this.decoderState.c1 = CeptInputState.C1_PARALLEL;
-        }
+      case CeptInputState.STATE_VPDE_DEFINE_DRCS:
+        this.handleVpdeDefineDrcs(b);
         break;
       case CeptInputState.STATE_VPDE_DEFINE_FORMAT:
         this.handleVpdeDefineFormat(b);
         break;
       case CeptInputState.STATE_VPDE_RESET:
         this.handleVpdeReset(b);
+        break;
+      case CeptInputState.STATE_VPDE_UNKNOWN:
+        this.handleVdpeUnknown(b);
         break;
       default:
         this.nextStateInitial();
@@ -354,13 +394,7 @@ export default class CeptInputState {
           this.nextStateInitial();
           break;
         case 0x18: // CAN
-          for (let x = this.cept.cursor.x; x < this.cept.cols; x++) {
-            // Part 1, §2.2, page 50, does only mention "character positions",
-            // but not attributes. But it appears existing terminals also clear
-            // all attributes
-            // this.cept.screen.rows[this.cept.cursor.y].attr[x].char = " ";
-            this.cept.screen.rows[this.cept.cursor.y].attr[x] = new CeptAttr();
-          }
+          this.cept.fill(this.cept.cursor.x, this.cept.cursor.y, this.cept.cols - this.cept.cursor.x, 1, " ");
           this.debugSymbols.push("CAN");
           this.nextStateInitial();
           break;
@@ -388,7 +422,8 @@ export default class CeptInputState {
           break;
         case 0x1f: // APA or US
           this.state = CeptInputState.STATE_APA;
-          this.apaState = CeptInputState.STATE_US_APA;
+          this.vdpeState = CeptInputState.STATE_VPDE;
+          this._logNextLine();
           break;
       }
     } else if (b >= 0x80 && (b < 0xa0)) {
@@ -540,11 +575,7 @@ export default class CeptInputState {
   }
 
   handleCsi(b) {
-    if (b >= 0x30 && b <= 0x39) {
-      this._paramsAccumulate(b);
-    } else if (b == 0x3b) {
-      this._paramsAdd();
-    } else {
+    if (!this._paramsAccumulate(b)) {
       switch (b) {
         case 0x40: // select color table
           this.decoderState.clutIndex = this.params[0] * 8;
@@ -694,20 +725,27 @@ export default class CeptInputState {
    * or four bytes if either dimension is larger. The numbers are 1-based
    * (upper-left hand corner is [1,1]).
    */
-  handleApa(b) {
-    switch (this.apaState) {
-      case CeptInputState.STATE_US_APA:
+  handleVdpe(b) {
+    switch (this.vdpeState) {
+      case CeptInputState.STATE_VPDE:
         if (b >= 0x40 && b < 0x80) {
           this.params = [0, 0];
           if (this.cept.screen.rows > 63 || this.cept.screen.cols > 63) {
             this.params[0] = (b & 0x3f) << 6;
-            this.apaState = CeptInputState.STATE_APA_B1;
+            this.vdpeState = CeptInputState.STATE_APA_B1;
           } else {
             this.params[0] = b & 0x3f;
-            this.apaState = CeptInputState.STATE_APA_B3;
+            this.vdpeState = CeptInputState.STATE_APA_B3;
           }
         } else {
           switch (b) {
+            // case 0x20:
+            // case 0x21:
+            //   break;
+            case 0x23: // DRCS
+              this.state = CeptInputState.STATE_VPDE_DEFINE_DRCS;
+              this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_INITIAL;
+              break;
             case 0x2d: // US 2/13: Define Format
               this.state = CeptInputState.STATE_VPDE_DEFINE_FORMAT;
               this.vpdeFormatState = CeptInputState.STATE_VPDE_DEFINE_FORMAT_INITIAL;
@@ -717,18 +755,18 @@ export default class CeptInputState {
               this.vpdeResetState = CeptInputState.STATE_VPDE_RESET_INITIAL;
               break;
             default:
-              this.debugSymbols.push("Unknown US " + b);
-              this.nextStateInitial();
+              this.debugSymbols.push("Unknown VPDE " + this._hex(b));
+              this.state = CeptInputState.STATE_VPDE_UNKNOWN;
           }
         }
         break;
       case CeptInputState.STATE_APA_B1:
         this.params[0] += b & 0x3f;
-        this.apaState = CeptInputState.STATE_APA_B2;
+        this.vdpeState = CeptInputState.STATE_APA_B2;
         break;
       case CeptInputState.STATE_APA_B2:
         this.params[1] = (b & 0x3f) << 6;
-        this.apaState = CeptInputState.STATE_APA_B3;
+        this.vdpeState = CeptInputState.STATE_APA_B3;
         break;
       case CeptInputState.STATE_APA_B3:
         this.params[1] += b & 0x3f;
@@ -741,6 +779,226 @@ export default class CeptInputState {
       default:
         this.nextStateInitial();
     }
+  }
+
+  handleVdpeUnknown(b) {
+    if (b == 0x1f) {
+      this.unshiftByte(b);
+      this.debugSymbols.push("skipped to next VPDE");
+      this.nextStateInitial();
+    }
+  }
+
+  handleVpdeDefineDrcs(b) {
+    switch (this.vdpeDrcsState) {
+      case CeptInputState.STATE_VPDE_DEFINE_DRCS_INITIAL:
+        switch (b) {
+          case 0x20:
+            this.drcsDefinition = {
+              repertory: 0,
+              delete: false,
+              char: 0x40,
+              pixelWidth: 12,
+              pixelHeight: 10,
+              cellWidth: 1,
+              cellHeight: 1,
+              bpp: 1,
+              codingType: 0,
+              codingSubType: 0,
+              setAttr: 0,
+            }
+            this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER;
+            break;
+            // case 0x21:
+            //   this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_PATTERN;
+            //   break;
+          default:
+            this.state = CeptInputState.STATE_VPDE_UNKNOWN;
+            this.debugSymbols.push("Unknown DRCS unit " + this._hex(b));
+        }
+        break;
+      case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER:
+        if (b >= 0x20 && b <= 0x29) {
+          // ICS F or 2/0 Fx
+          this.drcsDefinition.repertory = b & 0x01;
+          this.drcsDefinition.delete = b & 0x08 != 0;
+          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_F;
+        } else if (b >= 0x30 && b <= 0x3b) {
+          // collect parameter for character cell
+          this._paramsInit();
+          this._paramsAccumulate(b);
+          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC1_PARAMS;
+        } else if (this.drcsSdc(b)) {
+          // state updated as side effect
+        } else if (b >= 0x50 && b <= 0x5f) {
+          this.unshiftByte(b);
+          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM;
+        } else {
+          this.unshiftByte(b);
+          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SSA;
+        }
+        break;
+      case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_F:
+        if (b == 0x20) {
+          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_FX;
+        } else {
+          // FIXME: can F be a sequence as in ISO 2375?
+          this.drcsDefinition.char = b;
+          this._paramsInit();
+          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC1_PARAMS;
+        }
+        break;
+      case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_FX:
+        this.drcsDefinition.char = b;
+        this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC;
+        break;
+      case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC:
+        if (b >= 0x30 && b <= 0x39 || b == 0x3b) {
+          this._paramsInit();
+          this.unshiftByte(b);
+          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC1_PARAMS;
+        } else if (this.drcsSdc(b)) {
+          // state updated as side effect
+        } else {
+          
+        }
+        break;
+      case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC1_PARAMS:
+        if (!this._paramsAccumulate(b)) {
+          this.drcsDefinition.pixelWidth = this._param(0, 0) || 12; // std has no default, and parser will always have a first param
+          this.drcsDefinition.pixelHeight = this._param(1, 0) || 10;
+          this.drcsDefinition.cellWidth = this._param(2, 0) || 1;
+          this.drcsDefinition.cellHeight = this._param(3, 0) || 1;
+          this.drcsDefinition.bpp = this._param(4, 10);
+          this.unshiftByte(b);
+          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM;
+        }
+        break;
+      case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC2_PARAMS:
+        if (!this._paramsAccumulate(b)) {
+          this.drcsDefinition.cellWidth = this._param(0, 0) || 1;
+          this.drcsDefinition.cellHeight = this._param(1, 0) || 1;
+          this.unshiftByte(b);
+          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_IDC_SDC2_Q;
+        }
+        break;
+      case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_IDC_SDC2_Q:
+        if (b >= 0x40 && b <= 0x4f) {
+          this.drcsDefinition.bpp = b & 0x0f;
+        } else {
+          this.drcsDefinition.bpp = 1;
+          this.unshiftByte(b);
+        }
+        this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM;
+        break;
+      case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM:
+        if (b >= 0x50 && b <= 0x5f) {
+          this.drcsDefinition.codingType = b & 0x0f;
+          this.drcsDefinition.codingSubType = 0;
+          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM_ST;
+        } else {
+          this.unshiftByte(b);
+          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SSA;
+        }
+        break;
+      case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM_ST:
+        if (b >= 0x50 && b <= 0x5f) {
+          this.drcsDefinition.codingSubType = b & 0x0f;
+        } else {
+          this.unshiftByte(b);
+          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SSA;
+        }
+        break;
+      case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SSA:
+        if (b > 0x60 && b <= 0x6f) {
+          // actual effect undefined
+          this.drcsDefinition.setAttr = b & 0x0f;
+        } else {
+          this.unshiftByte(b);
+        }
+        this.debugSymbols.push("DRCS header: char " + this.drcsDefinition.char +
+          ", (" + this.drcsDefinition.pixelWidth + "×" + this.drcsDefinition.pixelHeight +
+          ")px, (" + this.drcsDefinition.cellWidth + "×" + this.drcsDefinition.cellHeight +
+          ")c, " + this.drcsDefinition.bpp + "bpp"
+        );
+        this.nextStateInitial();
+        break;
+    }
+  }
+
+  drcsSdc(b) {
+    if (b >= 0x40 && b <= 0x4f) {
+      switch (b & 0x0f) {
+        case 0:
+          this.drcsDefinition.pixelWidth = 16;
+          this.drcsDefinition.pixelHeight = 24;
+          break;
+        case 1:
+          this.drcsDefinition.pixelWidth = 16;
+          this.drcsDefinition.pixelHeight = 20;
+          break;
+        case 2:
+          this.drcsDefinition.pixelWidth = 16;
+          this.drcsDefinition.pixelHeight = 12;
+          break;
+        case 3:
+          this.drcsDefinition.pixelWidth = 16;
+          this.drcsDefinition.pixelHeight = 10;
+          break;
+        case 4:
+          this.drcsDefinition.pixelWidth = 12;
+          this.drcsDefinition.pixelHeight = 24;
+          break;
+        case 5:
+          this.drcsDefinition.pixelWidth = 12;
+          this.drcsDefinition.pixelHeight = 20;
+          break;
+        case 6:
+          this.drcsDefinition.pixelWidth = 12;
+          this.drcsDefinition.pixelHeight = 12;
+          break;
+        case 7:
+          this.drcsDefinition.pixelWidth = 12;
+          this.drcsDefinition.pixelHeight = 10;
+          break;
+        case 8:
+          this.drcsDefinition.pixelWidth = 8;
+          this.drcsDefinition.pixelHeight = 12;
+          break;
+        case 9:
+          this.drcsDefinition.pixelWidth = 8;
+          this.drcsDefinition.pixelHeight = 10;
+          break;
+        case 10:
+          this.drcsDefinition.pixelWidth = 6;
+          this.drcsDefinition.pixelHeight = 12;
+          break;
+        case 11:
+          this.drcsDefinition.pixelWidth = 6;
+          this.drcsDefinition.pixelHeight = 10;
+          break;
+        case 12:
+          this.drcsDefinition.pixelWidth = 6;
+          this.drcsDefinition.pixelHeight = 5;
+          break;
+        case 13:
+          this.drcsDefinition.pixelWidth = 4;
+          this.drcsDefinition.pixelHeight = 10;
+          break;
+        case 14:
+          this.drcsDefinition.pixelWidth = 4;
+          this.drcsDefinition.pixelHeight = 5;
+          break;
+        case 15:
+          this.drcsDefinition.pixelWidth = 6;
+          this.drcsDefinition.pixelHeight = 6;
+          break;
+      }
+      this._paramsInit();
+      this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC2_PARAMS;
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -770,10 +1028,8 @@ export default class CeptInputState {
         }
         break;
       case CeptInputState.STATE_VPDE_DEFINE_FORMAT_PARAMS:
-        if (b >= 0x30 && b <= 0x39) {
+        if (b >= 0x30 && b <= 0x39 || b == 0x3b) {
           this._paramsAccumulate(b);
-        } else if (b == 0x3b) {
-          this._paramsAdd();
           if (this.params.length == 3) {
             this.cept.format(this.params[1], this.params[0]);
             this.vpdeFormatState = CeptInputState.STATE_VPDE_DEFINE_FORMAT_WRAP;
@@ -906,7 +1162,7 @@ export default class CeptInputState {
         this.decoderState.c1 = c1;
         this.nextStateInitial();
         this.cept.move(0, y);
-        this.cept.fill(0, y, this.cept.cols, 1, " ");
+        // this.cept.fill(0, y, this.cept.cols, 1, " "); // not called for in the standard and probably wrong
         break;
     }
   }
