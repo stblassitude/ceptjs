@@ -4,7 +4,7 @@
 
 #screen {
   font-family: "Fairfax HD", Courier, monospace;
-  margin-right: calc(0.5*40em);
+  margin-right: calc(0.25*40em);
 }
 
 #keyboard {
@@ -34,9 +34,9 @@ button#keyboard-dial, button#keyboard-dct {
 
 #log {
   border: 1px solid grey;
-  margin: 5px;
+  margin-left: 20px;
   padding: 5px;
-  overflow-y: scroll;
+  overflow: scroll;
   max-height: 27em;
   flex-grow: 1;
   counter-reset: line;
