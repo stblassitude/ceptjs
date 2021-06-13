@@ -1,5 +1,5 @@
 export default class Keyboard {
-  constructor(serial) {
+  constructor(cept, serial) {
     const codes = {
       "ini": 0x13,
       "ter": 0x1c,
@@ -16,6 +16,7 @@ export default class Keyboard {
       "0": 0x30,
     }
 
+    this.cept = cept;
     this.serial = serial;
 
     for (let i of Object.keys(codes)) {
@@ -24,5 +25,8 @@ export default class Keyboard {
         this.serial.send(codes[i]);
       })
     }
+    document.getElementById("keyboard-reveal").addEventListener("click", (e) => {
+      this.cept.reveal = !this.cept.reveal;
+    })
   }
 }

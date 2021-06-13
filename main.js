@@ -7,5 +7,5 @@ window.addEventListener('DOMContentLoaded', (event) => {
     log: document.getElementById("log"),
   });
   let ws = new Serial(cept);
-  let kb = new Keyboard(ws);
+  let kb = new Keyboard(cept, ws);
 });
