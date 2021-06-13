@@ -394,117 +394,118 @@ export default class CeptTest {
     bytes = bytes.concat(this.encodeString("1234567a"));
     bytes = bytes.concat(this.moveTo(2, 1));
 
-    // bytes = bytes.concat([
-    //   0x1b, 0x23, 0x21, 0x54, // ESC 2/3 2/1 full row BLB
-    //   0x0a,
-    //   0x1b, 0x23, 0x21, 0x54, // ESC 2/3 2/1 full row BLB
-    //   0x1b, 0x23, 0x21, 0x4D, // ESC 2/3 2/1 full row DBH
-    //   0x8d, 0x83, // DBH, YLF
-    // ]);
-    // bytes = bytes.concat(this.encodeString("Receiving Bytes"));
-    // bytes = bytes.concat(this.crlf());
-    // bytes = bytes.concat([
-    //   0x8c, 0x87, 0x9e, 0x0a, // NSZ, WHF, TRB, APD
-    // ]);
-    //
-    // bytes = bytes.concat(this.encodeString("RPT: "));
-    // bytes = bytes.concat([
-    //   0x41, 0x12, 0x45, // "a" RPT 5
-    // ]);
-    // bytes = bytes.concat(this.crlf());
-    //
-    // bytes = bytes.concat(this.encodeString("APA(6,20): "));
-    // bytes = bytes.concat(this.moveTo(6, 20));
-    // bytes = bytes.concat(this.encodeString("X"));
-    // bytes = bytes.concat(this.crlf());
-    //
-    // bytes = bytes.concat(this.encodeString("Combining umlaut: "));
-    // bytes = bytes.concat([
-    //   0xc8, 0x75, // umlaut, "u"
-    // ]);
-    // bytes = bytes.concat(this.crlf());
-    //
-    // bytes = bytes.concat(this.encodeString("Parallel: "));
-    // bytes = bytes.concat([
-    //   0x1b, 0x22, 0x41, // ESC 2/2 4/1, switch to parallel C1
-    //   0x81, 0x92, // RDF, GRB
-    // ]);
-    // bytes = bytes.concat(this.encodeString("Red on Green"));
-    // bytes = bytes.concat([
-    //   0x87, 0x9e, // WHF, TRB
-    // ]);
-    // bytes = bytes.concat(this.crlf());
-    //
-    // bytes = bytes.concat([
-    //   0x1b, 0x23, 0x21, 0x53, // full row attribute yellow background
-    //   0x80, 0x93, // BKF, YLB
-    // ]);
-    // bytes = bytes.concat(this.encodeString("Full row black on yellow"));
-    // bytes = bytes.concat(this.crlf());
-    //
-    // bytes = bytes.concat([
-    //   0x1b, 0x22, 0x40, // ESC 2/2 4/0, switch to serial C1
-    //   0x84, 0x08, 0x9d, 0x08, 0x83, 0x08, // ANB, APB, NBD, APB, ANY, APB
-    // ]);
-    // bytes = bytes.concat(this.encodeString("Serial yellow on blue"));
-    // bytes = bytes.concat(this.crlf());
-    //
-    // bytes = bytes.concat([
-    //   0x1b, 0x22, 0x40, // ESC 2/2 4/0, switch to serial C1
-    //   0x87, 0x08, // ANW, APB
-    // ]);
-    // bytes = bytes.concat(this.encodeString("Mosaic "));
-    // bytes = bytes.concat([
-    //   0x9e, 0x97, 0x39, 0x87, // HMS, MSW, mosaic, ANW
-    // ]);
-    // bytes = bytes.concat(this.encodeString(" m. hold "));
-    // bytes = bytes.concat([
-    //   0x97, 0x96, 0x93, // MSW, MSC, MSY
-    //   0x9b, 0x31, 0x40, // CT2
-    //   0x93, // MSY
-    // ]);
-    // bytes = bytes.concat(this.crlf());
-    //
-    // bytes = bytes.concat([
-    //   0x1b, 0x22, 0x41, // ESC 2/2 4/1, switch to parallel C1
-    //   0x9b, 0x30, 0x40, // CT1
-    //   0x8c, 0x87, 0x9e, // NSZ, WHF, TRB
-    // ]);
-    // bytes = bytes.concat(this.encodeString("Flash: "));
-    // bytes = bytes.concat([
-    //   0x88, // FSH
-    // ]);
-    // bytes = bytes.concat(this.encodeString("flash "));
-    // bytes = bytes.concat([
-    //   0x9b, 0x30, 0x41, // IVF
-    // ]);
-    // bytes = bytes.concat(this.encodeString("inv. "));
-    // bytes = bytes.concat([
-    //   0x9b, 0x31, 0x41, // RIF
-    // ]);
-    // bytes = bytes.concat(this.encodeString("red.int. "));
-    // bytes = bytes.concat([
-    //   0x89, 0x88, // STD, FSH
-    //   0x9b, 0x32, 0x41, // FF1
-    // ]);
-    // bytes = bytes.concat(this.encodeString("fast1 "));
-    // bytes = bytes.concat([
-    //   0x9b, 0x35, 0x41, // ICF
-    // ]);
-    // bytes = bytes.concat(this.encodeString("2 "));
-    // bytes = bytes.concat([
-    //   0x9b, 0x35, 0x41, // ICF
-    // ]);
-    // bytes = bytes.concat(this.encodeString("3 "));
-    // bytes = bytes.concat(this.crlf());
+    bytes = bytes.concat([
+      0x1b, 0x23, 0x21, 0x54, // ESC 2/3 2/1 full row BLB
+      0x0a,
+      0x1b, 0x23, 0x21, 0x54, // ESC 2/3 2/1 full row BLB
+      0x1b, 0x23, 0x21, 0x4D, // ESC 2/3 2/1 full row DBH
+      0x8d, 0x83, // DBH, YLF
+    ]);
+    bytes = bytes.concat(this.encodeString("Receiving Bytes"));
+    bytes = bytes.concat(this.crlf());
+    bytes = bytes.concat([
+      0x8c, 0x87, 0x9e, 0x0a, // NSZ, WHF, TRB, APD
+    ]);
+
+    bytes = bytes.concat(this.encodeString("RPT: "));
+    bytes = bytes.concat([
+      0x41, 0x12, 0x45, // "a" RPT 5
+    ]);
+    bytes = bytes.concat(this.crlf());
+
+    bytes = bytes.concat(this.encodeString("APA(6,20): "));
+    bytes = bytes.concat(this.moveTo(6, 20));
+    bytes = bytes.concat(this.encodeString("X"));
+    bytes = bytes.concat(this.crlf());
+
+    bytes = bytes.concat(this.encodeString("Combining umlaut: "));
+    bytes = bytes.concat([
+      0xc8, 0x75, // umlaut, "u"
+    ]);
+    bytes = bytes.concat(this.crlf());
+
+    bytes = bytes.concat(this.encodeString("Parallel: "));
+    bytes = bytes.concat([
+      0x1b, 0x22, 0x41, // ESC 2/2 4/1, switch to parallel C1
+      0x81, 0x92, // RDF, GRB
+    ]);
+    bytes = bytes.concat(this.encodeString("Red on Green"));
+    bytes = bytes.concat([
+      0x87, 0x9e, // WHF, TRB
+    ]);
+    bytes = bytes.concat(this.crlf());
 
     bytes = bytes.concat([
-      // 0x1f, 0x23, 0x20,
-      // 0x1f, 0x23, 0x20, 0x20, 0x20, 0x51,
-      // 0x1f, 0x23, 0x20, 0x43,
+      0x1b, 0x23, 0x21, 0x53, // full row attribute yellow background
+      0x80, 0x93, // BKF, YLB
+    ]);
+    bytes = bytes.concat(this.encodeString("Full row black on yellow"));
+    bytes = bytes.concat(this.crlf());
+
+    bytes = bytes.concat([
+      0x1b, 0x22, 0x40, // ESC 2/2 4/0, switch to serial C1
+      0x84, 0x08, 0x9d, 0x08, 0x83, 0x08, // ANB, APB, NBD, APB, ANY, APB
+    ]);
+    bytes = bytes.concat(this.encodeString("Serial yellow on blue"));
+    bytes = bytes.concat(this.crlf());
+
+    bytes = bytes.concat([
+      0x1b, 0x22, 0x40, // ESC 2/2 4/0, switch to serial C1
+      0x87, 0x08, // ANW, APB
+    ]);
+    bytes = bytes.concat(this.encodeString("Mosaic "));
+    bytes = bytes.concat([
+      0x9e, 0x97, 0x39, 0x87, // HMS, MSW, mosaic, ANW
+    ]);
+    bytes = bytes.concat(this.encodeString(" m. hold "));
+    bytes = bytes.concat([
+      0x97, 0x96, 0x93, // MSW, MSC, MSY
+      0x9b, 0x31, 0x40, // CT2
+      0x93, // MSY
+    ]);
+    bytes = bytes.concat(this.crlf());
+
+    bytes = bytes.concat([
+      0x1b, 0x22, 0x41, // ESC 2/2 4/1, switch to parallel C1
+      0x9b, 0x30, 0x40, // CT1
+      0x8c, 0x87, 0x9e, // NSZ, WHF, TRB
+    ]);
+    bytes = bytes.concat(this.encodeString("Flash: "));
+    bytes = bytes.concat([
+      0x88, // FSH
+    ]);
+    bytes = bytes.concat(this.encodeString("flash "));
+    bytes = bytes.concat([
+      0x9b, 0x30, 0x41, // IVF
+    ]);
+    bytes = bytes.concat(this.encodeString("inv. "));
+    bytes = bytes.concat([
+      0x9b, 0x31, 0x41, // RIF
+    ]);
+    bytes = bytes.concat(this.encodeString("red.int. "));
+    bytes = bytes.concat([
+      0x89, 0x88, // STD, FSH
+      0x9b, 0x32, 0x41, // FF1
+    ]);
+    bytes = bytes.concat(this.encodeString("fast1 "));
+    bytes = bytes.concat([
+      0x9b, 0x35, 0x41, // ICF
+    ]);
+    bytes = bytes.concat(this.encodeString("2 "));
+    bytes = bytes.concat([
+      0x9b, 0x35, 0x41, // ICF
+    ]);
+    bytes = bytes.concat(this.encodeString("3 "));
+    bytes = bytes.concat(this.crlf());
+
+    bytes = bytes.concat([
+      0x1f, 0x23, 0x20,
+      0x1f, 0x23, 0x20, 0x20, 0x20, 0x51,
+      0x1f, 0x23, 0x20, 0x43,
       0x1f, 0x23, 0x20, 0x20, 0x20, 0x52, 0x43,
-      0x1f, 0x23, 0x20, 0x20, 0x20, 0x52, 0x43, 0x33, 0x3b, 0x32,
-      0x1f, 0x23, 0x20, 0x20, 0x20, 0x52, 0x43, 0x33, 0x3b, 0x32, 0x42,
+      0x1f, 0x23, 0x20, 0x20, 0x20, 0x53, 0x43, 0x33, 0x3b, 0x32,
+      0x1f, 0x23, 0x20, 0x20, 0x20, 0x54, 0x43, 0x33, 0x3b, 0x32, 0x42,
+      0x1f, 0x23, 0x20, 0x29, 0x59,
     ]);
 
     bytes = bytes.concat(this.moveTo(24, 1));

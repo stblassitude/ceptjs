@@ -808,6 +808,7 @@ export default class CeptInputState {
               setAttr: 0,
             }
             this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER;
+            this.vdpeDrcsStep = 0;
             break;
             // case 0x21:
             //   this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_PATTERN;
@@ -818,24 +819,107 @@ export default class CeptInputState {
         }
         break;
       case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER:
-        if (b >= 0x20 && b <= 0x29) {
+        let done = false;
+        if (this.vdpeDrcsStep <= 0 && b >= 0x20 && b <= 0x29) {
           // ICS F or 2/0 Fx
           this.drcsDefinition.repertory = b & 0x01;
           this.drcsDefinition.delete = b & 0x08 != 0;
           this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_F;
-        } else if (b >= 0x30 && b <= 0x3b) {
+        } else if (this.vdpeDrcsStep <= 1 && b >= 0x30 && b <= 0x3b) {
           // collect parameter for character cell
           this._paramsInit();
           this._paramsAccumulate(b);
           this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC1_PARAMS;
-        } else if (this.drcsSdc(b)) {
-          // state updated as side effect
-        } else if (b >= 0x50 && b <= 0x5f) {
-          this.unshiftByte(b);
-          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM;
+        } else if (this.vdpeDrcsStep <= 1 && b >= 0x40 && b <= 0x4f) {
+          switch (b & 0x0f) {
+            case 0:
+              this.drcsDefinition.pixelWidth = 16;
+              this.drcsDefinition.pixelHeight = 24;
+              break;
+            case 1:
+              this.drcsDefinition.pixelWidth = 16;
+              this.drcsDefinition.pixelHeight = 20;
+              break;
+            case 2:
+              this.drcsDefinition.pixelWidth = 16;
+              this.drcsDefinition.pixelHeight = 12;
+              break;
+            case 3:
+              this.drcsDefinition.pixelWidth = 16;
+              this.drcsDefinition.pixelHeight = 10;
+              break;
+            case 4:
+              this.drcsDefinition.pixelWidth = 12;
+              this.drcsDefinition.pixelHeight = 24;
+              break;
+            case 5:
+              this.drcsDefinition.pixelWidth = 12;
+              this.drcsDefinition.pixelHeight = 20;
+              break;
+            case 6:
+              this.drcsDefinition.pixelWidth = 12;
+              this.drcsDefinition.pixelHeight = 12;
+              break;
+            case 7:
+              this.drcsDefinition.pixelWidth = 12;
+              this.drcsDefinition.pixelHeight = 10;
+              break;
+            case 8:
+              this.drcsDefinition.pixelWidth = 8;
+              this.drcsDefinition.pixelHeight = 12;
+              break;
+            case 9:
+              this.drcsDefinition.pixelWidth = 8;
+              this.drcsDefinition.pixelHeight = 10;
+              break;
+            case 10:
+              this.drcsDefinition.pixelWidth = 6;
+              this.drcsDefinition.pixelHeight = 12;
+              break;
+            case 11:
+              this.drcsDefinition.pixelWidth = 6;
+              this.drcsDefinition.pixelHeight = 10;
+              break;
+            case 12:
+              this.drcsDefinition.pixelWidth = 6;
+              this.drcsDefinition.pixelHeight = 5;
+              break;
+            case 13:
+              this.drcsDefinition.pixelWidth = 4;
+              this.drcsDefinition.pixelHeight = 10;
+              break;
+            case 14:
+              this.drcsDefinition.pixelWidth = 4;
+              this.drcsDefinition.pixelHeight = 5;
+              break;
+            case 15:
+              this.drcsDefinition.pixelWidth = 6;
+              this.drcsDefinition.pixelHeight = 6;
+              break;
+          }
+          this._paramsInit();
+          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC2_PARAMS;
+        } else if (this.vdpeDrcsStep <= 2 && b >= 0x50 && b <= 0x5f) {
+          this.drcsDefinition.codingType = b & 0x0f;
+          this.drcsDefinition.codingSubType = 0;
+          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM_ST;
+        } else if (this.vdpeDrcsStep <= 3 && b > 0x60 && b <= 0x6f) {
+          // actual effect undefined
+          this.drcsDefinition.setAttr = b & 0x0f;
+          done = true;
         } else {
           this.unshiftByte(b);
-          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SSA;
+          done = true;
+        }
+        if (done) {
+          this.debugSymbols.push("DRCS header: rep. " + this.drcsDefinition.repertory + ", " +
+            ( this.drcsDefinition.delete ? "delete" : "keep") +
+             ", #" + this.drcsDefinition.char +
+            ", (" + this.drcsDefinition.pixelWidth + "×" + this.drcsDefinition.pixelHeight +
+            ")px, (" + this.drcsDefinition.cellWidth + "×" + this.drcsDefinition.cellHeight +
+            ")c, " + this.drcsDefinition.bpp + "bpp"
+          );
+          this.nextStateInitial();
         }
         break;
       case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_F:
@@ -845,23 +929,14 @@ export default class CeptInputState {
           // FIXME: can F be a sequence as in ISO 2375?
           this.drcsDefinition.char = b;
           this._paramsInit();
-          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC1_PARAMS;
+          this.vdpeDrcsStep = 1;
+          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER;
         }
         break;
       case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_FX:
         this.drcsDefinition.char = b;
-        this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC;
-        break;
-      case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC:
-        if (b >= 0x30 && b <= 0x39 || b == 0x3b) {
-          this._paramsInit();
-          this.unshiftByte(b);
-          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC1_PARAMS;
-        } else if (this.drcsSdc(b)) {
-          // state updated as side effect
-        } else {
-          
-        }
+        this.vdpeDrcsStep = 1;
+        this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER;
         break;
       case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC1_PARAMS:
         if (!this._paramsAccumulate(b)) {
@@ -871,7 +946,8 @@ export default class CeptInputState {
           this.drcsDefinition.cellHeight = this._param(3, 0) || 1;
           this.drcsDefinition.bpp = this._param(4, 10);
           this.unshiftByte(b);
-          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM;
+          this.vdpeDrcsStep = 2;
+          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER;
         }
         break;
       case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC2_PARAMS:
@@ -889,116 +965,19 @@ export default class CeptInputState {
           this.drcsDefinition.bpp = 1;
           this.unshiftByte(b);
         }
-        this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM;
-        break;
-      case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM:
-        if (b >= 0x50 && b <= 0x5f) {
-          this.drcsDefinition.codingType = b & 0x0f;
-          this.drcsDefinition.codingSubType = 0;
-          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM_ST;
-        } else {
-          this.unshiftByte(b);
-          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SSA;
-        }
+        this.vdpeDrcsStep = 2;
+        this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER;
         break;
       case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM_ST:
         if (b >= 0x50 && b <= 0x5f) {
           this.drcsDefinition.codingSubType = b & 0x0f;
         } else {
           this.unshiftByte(b);
-          this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SSA;
         }
-        break;
-      case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SSA:
-        if (b > 0x60 && b <= 0x6f) {
-          // actual effect undefined
-          this.drcsDefinition.setAttr = b & 0x0f;
-        } else {
-          this.unshiftByte(b);
-        }
-        this.debugSymbols.push("DRCS header: char " + this.drcsDefinition.char +
-          ", (" + this.drcsDefinition.pixelWidth + "×" + this.drcsDefinition.pixelHeight +
-          ")px, (" + this.drcsDefinition.cellWidth + "×" + this.drcsDefinition.cellHeight +
-          ")c, " + this.drcsDefinition.bpp + "bpp"
-        );
-        this.nextStateInitial();
+        this.vdpeDrcsStep = 3;
+        this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER;
         break;
     }
-  }
-
-  drcsSdc(b) {
-    if (b >= 0x40 && b <= 0x4f) {
-      switch (b & 0x0f) {
-        case 0:
-          this.drcsDefinition.pixelWidth = 16;
-          this.drcsDefinition.pixelHeight = 24;
-          break;
-        case 1:
-          this.drcsDefinition.pixelWidth = 16;
-          this.drcsDefinition.pixelHeight = 20;
-          break;
-        case 2:
-          this.drcsDefinition.pixelWidth = 16;
-          this.drcsDefinition.pixelHeight = 12;
-          break;
-        case 3:
-          this.drcsDefinition.pixelWidth = 16;
-          this.drcsDefinition.pixelHeight = 10;
-          break;
-        case 4:
-          this.drcsDefinition.pixelWidth = 12;
-          this.drcsDefinition.pixelHeight = 24;
-          break;
-        case 5:
-          this.drcsDefinition.pixelWidth = 12;
-          this.drcsDefinition.pixelHeight = 20;
-          break;
-        case 6:
-          this.drcsDefinition.pixelWidth = 12;
-          this.drcsDefinition.pixelHeight = 12;
-          break;
-        case 7:
-          this.drcsDefinition.pixelWidth = 12;
-          this.drcsDefinition.pixelHeight = 10;
-          break;
-        case 8:
-          this.drcsDefinition.pixelWidth = 8;
-          this.drcsDefinition.pixelHeight = 12;
-          break;
-        case 9:
-          this.drcsDefinition.pixelWidth = 8;
-          this.drcsDefinition.pixelHeight = 10;
-          break;
-        case 10:
-          this.drcsDefinition.pixelWidth = 6;
-          this.drcsDefinition.pixelHeight = 12;
-          break;
-        case 11:
-          this.drcsDefinition.pixelWidth = 6;
-          this.drcsDefinition.pixelHeight = 10;
-          break;
-        case 12:
-          this.drcsDefinition.pixelWidth = 6;
-          this.drcsDefinition.pixelHeight = 5;
-          break;
-        case 13:
-          this.drcsDefinition.pixelWidth = 4;
-          this.drcsDefinition.pixelHeight = 10;
-          break;
-        case 14:
-          this.drcsDefinition.pixelWidth = 4;
-          this.drcsDefinition.pixelHeight = 5;
-          break;
-        case 15:
-          this.drcsDefinition.pixelWidth = 6;
-          this.drcsDefinition.pixelHeight = 6;
-          break;
-      }
-      this._paramsInit();
-      this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC2_PARAMS;
-      return true;
-    }
-    return false;
   }
 
   /**
