@@ -634,11 +634,22 @@ export default class Cept {
       // c = "\u25cc" + c; // small dotted circle
       c = "\u00a0" + c;
     }
-    var x = this.cursor.x;
-    var y = this.cursor.y;
-    if (!serial)
-      Object.assign(this.screen.rows[y].attr[x], this.attr);
-    this.screen.rows[y].attr[x].char = c;
+    let x = this.cursor.x;
+    let y = this.cursor.y;
+    let attr = new CeptAttr();
+    if (serial) {
+      // use attr to the left, or row default if in position 1.
+      if (x == 0) {
+        // FIXME: use row default
+      } else {
+        Object.assign(attr, this.screen.rows[y].attr[x-1]);
+      }
+    } else {
+      Object.assign(attr, this.attr);
+    }
+    attr.char = c;
+    this.screen.rows[y].attr[x] = attr;
+    // blank out other cells covered by double height/width/size char
     x += 1;
     if (this.attr.size == Cept.SIZE_DOUBLE_WIDTH
         || this.attr.size == Cept.SIZE_DOUBLE_SIZE)
