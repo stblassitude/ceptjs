@@ -2,12 +2,49 @@ import Cept from './cept.js';
 import CeptCodeSets from './cept-codesets.js';
 
 
+class CeptDecoderState {
+  constructor(o) {
+    if (o !== undefined) {
+      this.c1 = o.c1;
+      this.charset = [
+        o.charset[0],
+        o.charset[1]
+      ];
+      this.clutIndex = o.clutIndex;
+      this.gset = [
+        o.gset[0],
+        o.gset[1],
+        o.gset[2],
+        o.gset[3],
+        o.gset[4]
+      ];
+      this.lastCharset = o.lastCharset;
+      this.mosaicHold = o.mosaicHold;
+      this.mosaicChar = o.mosaicChar;
+    } else {
+      this.c1 = CeptInputState.C1_SERIAL;
+      this.charset = [0, 2];
+      this.clutIndex = 0; // index offset for CLUT in use, ie. 8 for the second CLUT
+      this.gset = [ // designation of code sets into G sets
+        CeptInputState.CS_PRIMARY,
+        CeptInputState.CS_MOSAIC_2,
+        CeptInputState.CS_SUPPLEMENTARY,
+        CeptInputState.CS_MOSAIC_3,
+        CeptInputState.CS_MOSAIC_1, // we cheat by using this position for the L set by setting inUseCodeTable[0] = 4
+      ];
+      this.lastCharset = -1; // which G set to switch back to when returning from the L set
+      this.mosaicHold = false; // in serial C1, print last mosaic instead of space
+      this.mosaicChar = " "; // if holdMosaic, print this when processing C1
+    }
+  }
+}
+
 export default class CeptInputState {
   static STATE_INITIAL = 0;
   static STATE_RPT = 1;
   static STATE_ESC = 2;
   static STATE_APA = 3;
-  static STATE_COMBINING = 4;
+  // static STATE_ = 4;
   static STATE_CSI = 5;
   static STATE_GENERAL_DISPLAY_RESET = 6;
   static STATE_VPDE_DEFINE_FORMAT = 7;
@@ -33,17 +70,12 @@ export default class CeptInputState {
   static STATE_VPDE_RESET_INITIAL = 0;
   static STATE_VPDE_RESET_PARAM = 1;
 
-  static SUPPCTRL_NONE = 0;
-  static SUPPCTRL_SER = 1;
-  static SUPPCTRL_PAR = 2;
-
   static SINGLE_SHIFT_NONE = 0;
   static SINGLE_SHIFT_G2 = 2;
   static SINGLE_SHIFT_G3 = 3;
 
-  static C1_NONE = 0;
-  static C1_SERIAL = 1;
-  static C1_PARALLEL = 2;
+  static C1_SERIAL = 0;
+  static C1_PARALLEL = 1;
 
   static CS_PRIMARY = 0;
   static CS_SUPPLEMENTARY = 1;
@@ -64,39 +96,52 @@ export default class CeptInputState {
   constructor(cept) {
     this.cept = cept;
     this.bytes = [];
-    this.reset();
-  }
-
-  reset() {
     this.state = CeptInputState.STATE_INITIAL;
     this.apaState = CeptInputState.STATE_US_APA;
     this.escState = CeptInputState.STATE_ESC_INITIAL;
     this.vpdeFormatState = CeptInputState.STATE_VPDE_DEFINE_FORMAT_INITIAL;
     this.vpdeResetState = CeptInputState.STATE_VPDE_RESET_INITIAL;
-    this.lastChar = 0;
-    this.apax = 0;
-    this.apay = 0;
-    this.suppCtrl = CeptInputState.SUPPCTRL_NONE;
-    this.singleShift = CeptInputState.SINGLE_SHIFT_NONE;
-    // default code sets, see section 3.1.4
-    this.inUseCodeTable = [0, 2];
-    this.lastCodeTable = -1; // which G set to switch back to when returning from the L set
-    this.gSet = [ // designation of code sets into G sets
-      CeptInputState.CS_PRIMARY,
-      CeptInputState.CS_MOSAIC_2,
-      CeptInputState.CS_SUPPLEMENTARY,
-      CeptInputState.CS_MOSAIC_3,
-      CeptInputState.CS_MOSAIC_1, // we cheat by using this position for the L set by setting inUseCodeTable[0] = 4
-    ];
-    this.clutIndex = 0; // index offset for CLUT in use, ie. 8 for the second CLUT
-    this.combining = ""; // saved unicode combining char
-    this.c1 = CeptInputState.C1_SERIAL;
-    this.holdMosaic = false; // in serial C1, print last mosaic instead of space
-    this.lastMosaic = " "; // if holdMosaic, print this when processing C1
-    this.csiParams = [];
 
+    this.combining = ""; // saved unicode combining char
+    this.lastChar = ""; // last unicode character printed for RPT
+    this.singleShift = CeptInputState.SINGLE_SHIFT_NONE;
+
+    this.savedState = undefined;
+
+    this._paramsInit();
     this.debugBytes = [];
     this.debugSymbols = [];
+
+    this.reset();
+  }
+
+  _hex(b) {
+    return ("0" + b.toString(16)).slice(-2);
+  }
+
+  /**
+   * Start the parameter list with a single value of 0.
+   */
+  _paramsInit() {
+    this.params = [0];
+  }
+
+  /**
+   * Add another parameter to the list, initialized to 0.
+   */
+  _paramsAdd() {
+    this.params.push(0);
+  }
+
+  /**
+   * Add digit to current parameter, multiplying existing value by 10.
+   */
+  _paramsAccumulate(b) {
+    this.params[this.params.length - 1] = this.params[this.params.length - 1] * 10 + b - 0x30;
+  }
+
+  reset() {
+    this.decoderState = new CeptDecoderState();
   }
 
   /**
@@ -108,7 +153,7 @@ export default class CeptInputState {
    */
   getUnicodeChar(c) {
     let lr = c >> 7;
-    let g = this.gSet[this.inUseCodeTable[lr]];
+    let g = this.decoderState.gset[this.decoderState.charset[lr]];
     c = c & 0x7f;
     if (c < 0x20)
       return -1;
@@ -136,21 +181,33 @@ export default class CeptInputState {
     let u = this.getUnicodeChar(c);
     if (u != -1) {
       this.lastChar = u;
-      this.cept.write(this.lastChar, this.c1 == CeptInputState.C1_SERIAL);
+      this.cept.write(this.lastChar, this.decoderState.c1 == CeptInputState.C1_SERIAL);
       this.debugSymbols.push(this.lastChar);
-      switch (this.gSet[this.inUseCodeTable[c >> 7]]) {
+      switch (this.decoderState.gset[this.decoderState.charset[c >> 7]]) {
         case CeptInputState.CS_MOSAIC_1:
         case CeptInputState.CS_MOSAIC_2:
         case CeptInputState.CS_MOSAIC_3:
-          this.lastMosaic = u;
+          this.decoderState.mosaicChar = u;
       }
     }
+  }
+
+  saveState() {
+    return {
+      decoder: new CeptDecoderState(this.decoderState),
+      screen: this.cept.saveState(),
+    }
+  }
+
+  restoreState(s) {
+    this.cept.restoreState(s.screen);
+    this.decoderState = new CeptDecoderState(s.decoder);
   }
 
   nextLog() {
     let m = "<span class='hex'>";
     for (let b of this.debugBytes) {
-      m += " " + ("0" + b.toString(16)).slice(-2);
+      m += " " + this._hex(b);
     }
     m += "</span>";
     for (let b of this.debugSymbols) {
@@ -167,20 +224,23 @@ export default class CeptInputState {
   }
 
   /**
-   * Processes the next received byte. If bytes are pushed back to the FIFO
+   * Processes the next received bytes. If bytes are pushed back to the FIFO
    * during processing, try and process them as well.
    */
-  nextByte(b) {
-    this.bytes.push(b);
+  input(...byteArray) {
+    this.bytes = this.bytes.concat(byteArray);
 
     while (this.bytes.length > 0) {
       let b = this.bytes.shift();
-      console.log("byte", ("0" + b.toString(16)).slice(-2));
       this.debugBytes.push(b);
       this.handleByte(b);
     }
   }
 
+  /**
+   * Put a byte back into the buffer. This can be necessary when the end of a
+   * sequence can only be detected by checking for an invalid byte.
+   */
   unshiftByte(b) {
     this.bytes.unshift(b);
     this.debugBytes.pop();
@@ -206,10 +266,6 @@ export default class CeptInputState {
       case CeptInputState.STATE_APA:
         return this.handleApa(b);
         break;
-      case CeptInputState.STATE_COMBINING:
-        // b + this.combining
-        this.nextStateInitial();
-        break;
       case CeptInputState.STATE_CSI:
         return this.handleCsi(b);
         break;
@@ -217,9 +273,9 @@ export default class CeptInputState {
         this.cept.reset();
         this.reset();
         if (b == 0x41) {
-          this.c1 = CeptInputState.C1_SERIAL;
+          this.decoderState.c1 = CeptInputState.C1_SERIAL;
         } else if (b == 0x42) {
-          this.c1 = CeptInputState.C1_PARALLEL;
+          this.decoderState.c1 = CeptInputState.C1_PARALLEL;
         }
         break;
       case CeptInputState.STATE_VPDE_DEFINE_FORMAT:
@@ -273,13 +329,13 @@ export default class CeptInputState {
           this.nextStateInitial();
           break;
         case 0x0e: // SO
-          this.inUseCodeTable[0] = 1;
+          this.decoderState.charset[0] = 1;
           this.debugSymbols.push("SO");
           this.deactivateL();
           this.nextStateInitial();
           break;
         case 0x0f: // SI
-          this.inUseCodeTable[0] = 0;
+          this.decoderState.charset[0] = 0;
           this.debugSymbols.push("SI");
           this.deactivateL();
           this.nextStateInitial();
@@ -299,7 +355,11 @@ export default class CeptInputState {
           break;
         case 0x18: // CAN
           for (let x = this.cept.cursor.x; x < this.cept.cols; x++) {
-            this.cept.screen.rows[this.cept.cursor.y].attr[x].char = " ";
+            // Part 1, §2.2, page 50, does only mention "character positions",
+            // but not attributes. But it appears existing terminals also clear
+            // all attributes
+            // this.cept.screen.rows[this.cept.cursor.y].attr[x].char = " ";
+            this.cept.screen.rows[this.cept.cursor.y].attr[x] = new CeptAttr();
           }
           this.debugSymbols.push("CAN");
           this.nextStateInitial();
@@ -335,10 +395,10 @@ export default class CeptInputState {
       this.handleC1(b);
     } else {
       if (this.singleShift != CeptInputState.SINGLE_SHIFT_NONE) {
-        let lastSet = this.inUseCodeTable[0];
-        this.inUseCodeTable[0] = this.singleShift;
+        let lastSet = this.decoderState.charset[0];
+        this.decoderState.charset[0] = this.singleShift;
         this.writeCharacter(b);
-        this.inUseCodeTable[0] = lastSet;
+        this.decoderState.charset[0] = lastSet;
         this.singleShift = CeptInputState.SINGLE_SHIFT_NONE
         this.debugSymbols.push("single shift end");
         this.nextStateInitial();
@@ -364,23 +424,23 @@ export default class CeptInputState {
         } else {
           switch (b) {
             case 0x6e:
-              this.inUseCodeTable[0] = 2;
+              this.decoderState.charset[0] = 2;
               this.debugSymbols.push("LS2");
               break;
             case 0x6f:
-              this.inUseCodeTable[0] = 3;
+              this.decoderState.charset[0] = 3;
               this.debugSymbols.push("LS3");
               break;
             case 0x7c:
-              this.inUseCodeTable[1] = 3;
+              this.decoderState.charset[1] = 3;
               this.debugSymbols.push("LS3R");
               break;
             case 0x7c:
-              this.inUseCodeTable[1] = 2;
+              this.decoderState.charset[1] = 2;
               this.debugSymbols.push("LS2R");
               break;
             case 0x7c:
-              this.inUseCodeTable[1] = 1;
+              this.decoderState.charset[1] = 1;
               this.debugSymbols.push("LS1R");
               break;
             default:
@@ -392,11 +452,11 @@ export default class CeptInputState {
       case CeptInputState.STATE_ESC_SUPP_CTRL:
         switch (b) {
           case 0x40: // Serial Supplementary Control Function Set, 3.3.1
-            this.c1 = CeptInputState.C1_SERIAL;
+            this.decoderState.c1 = CeptInputState.C1_SERIAL;
             this.debugSymbols.push("C1s");
             break;
           case 0x41: // Parallel Supplementary Control Function Set, 3.3.2
-            this.c1 = CeptInputState.C1_PARALLEL;
+            this.decoderState.c1 = CeptInputState.C1_PARALLEL;
             this.debugSymbols.push("C1p");
             this.deactivateL();
             break;
@@ -415,14 +475,14 @@ export default class CeptInputState {
         break;
       case CeptInputState.STATE_ESC_FSFR_SCREEN:
         if (b >= 0x50 && b <= 0x57) {
-          this.cept.screenColor = b - 0x50 + this.clutIndex;
+          this.cept.screenColor = b - 0x50 + this.decoderState.clutIndex;
           this.debugSymbols.push("Full screen color " + this.cept.screenColor);
         }
         this.nextStateInitial();
         break;
       case CeptInputState.STATE_ESC_FSFR_ROW:
         if (b >= 0x50 && b <= 0x57) {
-          this.cept.screen.rows[this.cept.cursor.y].bg = b - 0x50 + this.clutIndex;
+          this.cept.screen.rows[this.cept.cursor.y].bg = b - 0x50 + this.decoderState.clutIndex;
           this.debugSymbols.push("Row background color " + this.cept.screen.rows[this.cept.cursor.y].bg);
         }
         let sym;
@@ -431,7 +491,7 @@ export default class CeptInputState {
           attr.marked = false;
           sym = this.applyParallelSuppCtrl(b, attr);
         }
-        this.debugSymbols.push("Row attr " + sym);
+        this.debugSymbols.push("Row attr: " + sym);
         this.nextStateInitial();
         break;
       case CeptInputState.STATE_ESC_DESIGNATION_GC:
@@ -440,22 +500,22 @@ export default class CeptInputState {
             this.escState = CeptInputState.STATE_ESC_DESIGNATION_GC_EXT;
             break;
           case 0x40:
-            this.gSet[this.gsDesignation] = CeptInputState.CS_PRIMARY;
+            this.decoderState.gset[this.gsDesignation] = CeptInputState.CS_PRIMARY;
             this.debugSymbols.push("G" + this.gsDesignation + " <- primary");
             this.nextStateInitial();
             break;
           case 0x63:
-            this.gSet[this.gsDesignation] = CeptInputState.CS_MOSAIC_2;
+            this.decoderState.gset[this.gsDesignation] = CeptInputState.CS_MOSAIC_2;
             this.debugSymbols.push("G" + this.gsDesignation + " <- mosaic 2");
             this.nextStateInitial();
             break;
           case 0x62:
-            this.gSet[this.gsDesignation] = CeptInputState.CS_SUPPLEMENTARY;
+            this.decoderState.gset[this.gsDesignation] = CeptInputState.CS_SUPPLEMENTARY;
             this.debugSymbols.push("G" + this.gsDesignation + " <- supplementary");
             this.nextStateInitial();
             break;
           case 0x64:
-            this.gSet[this.gsDesignation] = CeptInputState.CS_MOSAIC_3;
+            this.decoderState.gset[this.gsDesignation] = CeptInputState.CS_MOSAIC_3;
             this.debugSymbols.push("G" + this.gsDesignation + " <- mosaic 3");
             this.nextStateInitial();
             break;
@@ -466,7 +526,7 @@ export default class CeptInputState {
       case CeptInputState.STATE_ESC_DESIGNATION_GC_EXT:
         switch (b) {
           case 0x40:
-            this.gSet[this.gsDesignation] = CeptInputState.GREEK;
+            this.decoderState.gset[this.gsDesignation] = CeptInputState.GREEK;
             this.debugSymbols.push("G" + this.gsDesignation + " <- greek");
             this.nextStateInitial();
             break;
@@ -481,19 +541,17 @@ export default class CeptInputState {
 
   handleCsi(b) {
     if (b >= 0x30 && b <= 0x39) {
-      // add to current param
-      this.csiParams[this.csiParams.length - 1] = this.csiParams[this.csiParams.length - 1] * 10 + b - 0x30;
+      this._paramsAccumulate(b);
     } else if (b == 0x3b) {
-      // another param
-      this.csiParams.push(0);
+      this._paramsAdd();
     } else {
       switch (b) {
         case 0x40: // select color table
-          this.clutIndex = this.csiParams[0] * 8;
-          this.debugSymbols.push("CT" + (this.csiParams[0] + 1));
+          this.decoderState.clutIndex = this.params[0] * 8;
+          this.debugSymbols.push("CT" + (this.params[0] + 1));
           break;
         case 0x41:
-          switch (this.csiParams[0]) {
+          switch (this.params[0]) {
             case 0: // IVF: inverted flash
               this.cept.flashInverted = true;
               this.debugSymbols.push("IVF");
@@ -555,7 +613,7 @@ export default class CeptInputState {
           this.debugSymbols.push("Delete Scrolling Area");
           break;
         case 0x60:
-          switch (this.csiParams[0]) {
+          switch (this.params[0]) {
             case 0:
               this.debugSymbols.push("Scroll Up");
               break;
@@ -569,7 +627,7 @@ export default class CeptInputState {
               this.debugSymbols.push("Deactivate Implicit Scrolling");
               break;
             default:
-              this.debugSymbols.push("unknown 0x60 + " + this.csiParams[0]);
+              this.debugSymbols.push("unknown 0x60 + " + this.params[0]);
           }
           default:
             this.debugSymbols.push("unknown " + b);
@@ -583,16 +641,16 @@ export default class CeptInputState {
     if (b >= 0x80 && b <= 0x9f) {
       // supplementary control function, 3.3
       b -= 0x40; // C1 is defined as 4/0 to 5/15
-      if (this.c1 == CeptInputState.C1_SERIAL) {
+      if (this.decoderState.c1 == CeptInputState.C1_SERIAL) {
         if (b == 0x5b) {
           this.state = CeptInputState.STATE_CSI;
-          this.csiParams = [0];
+          this._paramsInit();
         } else if (b == 0x5e) {
-          this.holdMosaic = true;
+          this.decoderState.mosaicHold = true;
           this.debugSymbols.push("HMS");
           this.nextStateInitial();
         } else if (b == 0x5f) {
-          this.holdMosaic = false;
+          this.decoderState.mosaicHold = false;
           this.debugSymbols.push("RMS");
           this.nextStateInitial();
         } else {
@@ -601,7 +659,7 @@ export default class CeptInputState {
           let attr = this.cept.screen.rows[this.cept.cursor.y].attr[this.cept.cursor.x];
           this.applySerialSuppCtrl(b, attr);
           attr.marked = true;
-          attr.char = this.holdMosaic ? this.lastMosaic : " ";
+          attr.char = this.decoderState.mosaicHold ? this.decoderState.mosaicChar : " ";
           if (++this.cept.cursor.x < this.cept.cols) {
             for (var x = this.cept.cursor.x; x < this.cept.cols; x++) {
               let attr = this.cept.screen.rows[this.cept.cursor.y].attr[x];
@@ -614,10 +672,10 @@ export default class CeptInputState {
           this.nextStateInitial();
         }
         this.cept._limitCursor();
-      } else if (this.c1 == CeptInputState.C1_PARALLEL) {
+      } else if (this.decoderState.c1 == CeptInputState.C1_PARALLEL) {
         if (b == 0x5b) {
           this.state = CeptInputState.STATE_CSI;
-          this.csiParams = [0];
+          this._paramsInit();
         } else {
           let sym = this.applyParallelSuppCtrl(b, this.cept.attr);
           this.debugSymbols.push(sym);
@@ -640,12 +698,12 @@ export default class CeptInputState {
     switch (this.apaState) {
       case CeptInputState.STATE_US_APA:
         if (b >= 0x40 && b < 0x80) {
-          this.apax = 0;
+          this.params = [0, 0];
           if (this.cept.screen.rows > 63 || this.cept.screen.cols > 63) {
-            this.apay = (b & 0x3f) << 6;
+            this.params[0] = (b & 0x3f) << 6;
             this.apaState = CeptInputState.STATE_APA_B1;
           } else {
-            this.apay = b & 0x3f;
+            this.params[0] = b & 0x3f;
             this.apaState = CeptInputState.STATE_APA_B3;
           }
         } else {
@@ -665,17 +723,17 @@ export default class CeptInputState {
         }
         break;
       case CeptInputState.STATE_APA_B1:
-        this.apay += b & 0x3f;
+        this.params[0] += b & 0x3f;
         this.apaState = CeptInputState.STATE_APA_B2;
         break;
       case CeptInputState.STATE_APA_B2:
-        this.apax = (b & 0x3f) << 6;
+        this.params[1] = (b & 0x3f) << 6;
         this.apaState = CeptInputState.STATE_APA_B3;
         break;
       case CeptInputState.STATE_APA_B3:
-        this.apax += b & 0x3f;
-        this.cept.move(this.apax - 1, this.apay - 1);
-        this.debugSymbols.push("APA(" + (this.apay - 1) + "," + (this.apax - 1) + ")");
+        this.params[1] += b & 0x3f;
+        this.cept.move(this.params[1] - 1, this.params[0] - 1);
+        this.debugSymbols.push("APA(" + (this.params[1]) + "," + (this.params[0]) + ")");
         // FIXME: only if actually moving to a different line?
         this.deactivateL();
         this.nextStateInitial();
@@ -701,11 +759,11 @@ export default class CeptInputState {
         if (this.handleVpdeDefineFormatSpec()) {
           this.vpdeFormatState = CeptInputState.STATE_VPDE_DEFINE_FORMAT_WRAP;
         } else if (this.handleVpdeDefineFormatWrap(b)) {
-          this.cept.init(24, 40);
+          this.cept.format(24, 40);
           this.debugSymbols.push("Define Format(40x24)");
           this.nextStateInitial();
         } else {
-          this.cept.init(24, 40);
+          this.cept.format(24, 40);
           this.debugSymbols.push("Define Format(40x24)");
           this.unshiftByte(b);
           this.nextStateInitial();
@@ -713,13 +771,11 @@ export default class CeptInputState {
         break;
       case CeptInputState.STATE_VPDE_DEFINE_FORMAT_PARAMS:
         if (b >= 0x30 && b <= 0x39) {
-          // add to current param
-          this.csiParams[this.csiParams.length - 1] = this.csiParams[this.csiParams.length - 1] * 10 + b - 0x30;
+          this._paramsAccumulate(b);
         } else if (b == 0x3b) {
-          // another param
-          this.csiParams.push(0);
-          if (this.csiParams.length == 2) {
-            this.cept.init(this.csiParams[1], this.csiParams[0]);
+          this._paramsAdd();
+          if (this.params.length == 3) {
+            this.cept.format(this.params[1], this.params[0]);
             this.vpdeFormatState = CeptInputState.STATE_VPDE_DEFINE_FORMAT_WRAP;
           }
         } else if (this.handleVpdeDefineFormatWrap(b)) {
@@ -743,32 +799,32 @@ export default class CeptInputState {
   handleVpdeDefineFormatSpec(b) {
     switch (b) {
       case 0x41:
-        this.cept.init(24, 40);
+        this.cept.format(24, 40);
         this.debugSymbols.push("Define Format(40x24)");
         break;
       case 0x42:
-        this.cept.init(20, 40);
+        this.cept.format(20, 40);
         this.debugSymbols.push("Define Format(40x20)");
         break;
       case 0x43:
-        this.cept.init(24, 80);
+        this.cept.format(24, 80);
         this.debugSymbols.push("Define Format(80x24)");
         break;
       case 0x44:
-        this.cept.init(20, 80);
+        this.cept.format(20, 80);
         this.debugSymbols.push("Define Format(80x20)");
         break;
       case 0x45:
-        this.cept.init(20, 48);
+        this.cept.format(20, 48);
         this.debugSymbols.push("Define Format(48x24)");
         break;
       case 0x46:
-        this.cept.init(25, 40);
+        this.cept.format(25, 40);
         this.debugSymbols.push("Define Format(40x25)");
         break;
       case 0x47:
         this.vpdeFormatState = CeptInputState.STATE_VPDE_DEFINE_FORMAT_PARAMS;
-        this.csiParams = [0];
+        this._paramsInit();
         break;
       default:
         return false;
@@ -788,63 +844,99 @@ export default class CeptInputState {
   handleVpdeReset(b) {
     switch (this.vpdeResetState) {
       case CeptInputState.STATE_VPDE_RESET_INITIAL:
-        switch (b) {
-          case 0x40:
-          case 0x45:
-            this.vpdeResetOp = b;
-            this.vpdeResetState = CeptInputState.STATE_VPDE_RESET_PARAM;
-            break;
-          case 0x41:
-            // FIXME: implement
-            this.debugSymbols.push("VPDE reset general, serial C1");
-            this.nextStateInitial();
-            break;
-          case 0x42:
-            // FIXME: implement
-            this.debugSymbols.push("VPDE reset general, parallel C1");
-            this.nextStateInitial();
-            break;
-          case 0x43:
-            // FIXME: implement
-            this.debugSymbols.push("VPDE reset set, serial C1");
-            this.activateL();
-            this.nextStateInitial();
-            break;
-          case 0x44:
-            // FIXME: implement
-            this.debugSymbols.push("VPDE reset set, parallel C1");
-            this.activateL();
-            this.nextStateInitial();
-            break;
-          case 0x4f:
-            // FIXME: implement
-            this.debugSymbols.push("VPDE reset service break reset");
-            this.nextStateInitial();
-            break;
-          default:
-            this.debugSymbols.push("VPDE RESET unknown op " + b);
-            this.nextStateInitial();
-            break;
+        if (b == 0x40 || b == 0x45) {
+          this.vpdeResetOp = b;
+          this.vpdeResetState = CeptInputState.STATE_VPDE_RESET_PARAM;
+        } else {
+          switch (b) {
+            case 0x41:
+              this.debugSymbols.push("RESET general, serial C1");
+              this.vpdeResetGeneralReset();
+              this.decoderState.c1 = CeptInputState.C1_SERIAL;
+              break;
+            case 0x42:
+              this.debugSymbols.push("RESET general, parallel C1");
+              this.vpdeResetGeneralReset();
+              this.decoderState.c1 = CeptInputState.C1_PARALLEL;
+              break;
+            case 0x43:
+              this.debugSymbols.push("RESET control/graphics, C1s");
+              this.vpdeResetControlGraphicsSet();
+              this.decoderState.c1 = CeptInputState.C1_SERIAL;
+              break;
+            case 0x44:
+              this.debugSymbols.push("RESET control/graphics, C1p");
+              this.vpdeResetControlGraphicsSet();
+              this.decoderState.c1 = CeptInputState.C1_PARALLEL;
+              break;
+            case 0x4f:
+              this.debugSymbols.push("RESET service break reset");
+              if (this.savedState !== undefined) {
+                this.restoreState(this.savedState);
+                this.savedState = undefined;
+              }
+              // FIXME: disable protected area
+              break;
+            default:
+              this.debugSymbols.push("VPDE RESET unknown op " + b);
+              break;
+          }
+          this.nextStateInitial();
         }
         break;
       case CeptInputState.STATE_VPDE_RESET_PARAM:
-        switch(this.vpdeResetOp) {
+        let y = (b & 0x3f);
+        let c1 = CeptInputState.C1_PARALLEL;
+        switch (this.vpdeResetOp) {
           case 0x40:
-            this.debugSymbols.push("VPDE RESET service break, ser. C1");
-            // FIXME: implement saving and updating attributes
-            this.c1 = CeptInputState.C1_SERIAL;
-            this.cept.move(0, b & 0x3f);
-            this.nextStateInitial();
+            this.debugSymbols.push("RESET service break, ser. C1 at " + (b & 0x3f));
+            c1 = CeptInputState.C1_SERIAL;
             break;
+            // FALLTHROUGH
           case 0x45:
-            this.debugSymbols.push("VPDE RESET service break, par. C1");
-            // FIXME: implement saving and updating attributes
-            this.c1 = CeptInputState.C1_PARALLEL;
-            this.cept.move(0, b & 0x3f);
-            this.nextStateInitial();
+            this.debugSymbols.push("VPDE RESET service break, par. C1 at " + (b & 0x3f));
+            c1 = CeptInputState.C1_PARALLEL;
             break;
+          default:
+            this.debugSymbols.push("VPDE RESET unknown code " + this._hex(b));
+            this.nextStateInitial();
+            return;
         }
+        this.vpdeResetServiceBreakSave();
+        this.decoderState.c1 = c1;
+        this.nextStateInitial();
+        this.cept.move(0, y);
+        this.cept.fill(0, y, this.cept.cols, 1, " ");
+        break;
     }
+  }
+
+  vpdeResetGeneralReset() {
+    this.cept.format(24, 80);
+    this.vpdeResetControlGraphicsSet();
+  }
+
+  vpdeResetControlGraphicsSet() {
+    this.decoderState.gset = [ // designation of code sets into G sets
+      CeptInputState.CS_PRIMARY,
+      CeptInputState.CS_MOSAIC_2,
+      CeptInputState.CS_SUPPLEMENTARY,
+      CeptInputState.CS_MOSAIC_3,
+      CeptInputState.CS_MOSAIC_1, // we cheat by using this position for the L set by setting codeset[0] = 4
+    ];
+    this.decoderState.charset[0] = 0;
+    this.decoderState.charset[1] = 2;
+    this.deactivateL();
+  }
+
+  vpdeResetServiceBreakSave() {
+    this.savedState = this.saveState();
+    this.decoderState = new CeptDecoderState(this.decoderState);
+    this.decoderState.gset[0] = CeptInputState.CS_PRIMARY;
+    this.decoderState.gset[2] = CeptInputState.CS_SUPPLEMENTARY;
+    this.decoderState.charset[0] = 0;
+    this.decoderState.charset[1] = 2;
+    this.decoderState.wraparound = false;
   }
 
   /**
@@ -855,12 +947,12 @@ export default class CeptInputState {
     // parallel: foreground and background
     if (b >= 0x40 && b <= 0x47) {
       // 2.3.1c
-      attr.fg = b - 0x40 + this.clutIndex;
-      sym = "fg " + (b - 0x40 + this.clutIndex);
+      attr.fg = b - 0x40 + this.decoderState.clutIndex;
+      sym = "fg " + (b - 0x40 + this.decoderState.clutIndex);
     } else if (b >= 0x50 && b <= 0x57) {
       // 2.3.2c
-      attr.bg = b - 0x50 + this.clutIndex;
-      sym = "bg " + (b - 0x40 + this.clutIndex);
+      attr.bg = b - 0x50 + this.decoderState.clutIndex;
+      sym = "bg " + (b - 0x40 + this.decoderState.clutIndex);
     } else {
       switch (b) {
         case 0x48: // FSH: flash, 2.3.5
@@ -936,17 +1028,17 @@ export default class CeptInputState {
 
   activateL() {
     // locking shift to L
-    if (this.inUseCodeTable[0] != 4) {
-      this.lastCodeTable = this.inUseCodeTable[0];
-      this.inUseCodeTable[0] = 4;
+    if (this.decoderState.charset[0] != 4) {
+      this.decoderState.lastCharset = this.decoderState.charset[0];
+      this.decoderState.charset[0] = 4;
     }
   }
 
   deactivateL() {
-    if (this.lastCodeTable >= 0) {
+    if (this.decoderState.lastCharset >= 0) {
       // switch back to previously selected G0
-      this.inUseCodeTable[0] = this.lastCodeTable;
-      this.lastCodeTable = -1;
+      this.decoderState.charset[0] = this.decoderState.lastCharset;
+      this.decoderState.lastCharset = -1;
     }
   }
 
@@ -957,12 +1049,12 @@ export default class CeptInputState {
     let sym = "unknown";
     // serial: foreground, and alpha or mosaic shift
     if (b >= 0x40 && b <= 0x47) {
-      attr.fg = b - 0x40 + this.clutIndex;
-      sym = "alpha fg " + (b - 0x40 + this.clutIndex);
+      attr.fg = b - 0x40 + this.decoderState.clutIndex;
+      sym = "alpha fg " + (b - 0x40 + this.decoderState.clutIndex);
       this.deactivateL();
     } else if (b >= 0x50 && b <= 0x57) {
-      attr.fg = b - 0x50 + this.clutIndex;
-      sym = "mosaic fg " + (b - 0x40 + this.clutIndex);
+      attr.fg = b - 0x50 + this.decoderState.clutIndex;
+      sym = "mosaic fg " + (b - 0x40 + this.decoderState.clutIndex);
       this.activateL();
     } else {
       switch (b) {

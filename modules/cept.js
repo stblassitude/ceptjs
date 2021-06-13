@@ -4,6 +4,7 @@ import CeptInputState from './cept-inputstate.js'
 class CeptAttr {
 
   constructor(attr) {
+    // see Part 1, §1.5.2, page 14 for default initial values.
     this.char = " "
     this.bg = Cept.COLOR_TRANSPARENT;
     this.fg = Cept.COLOR_WHITE;
@@ -17,6 +18,7 @@ class CeptAttr {
     this.protected = false;
     this.size = Cept.SIZE_NORMAL;
     this.underline = false;
+    // FIXME: boxed attribute?
     if (attr !== undefined)
       Object.assign(this, attr);
   }
@@ -118,6 +120,7 @@ export default class Cept {
       throw "Need to specify element or selector";
     }
     this.elements.log = options.log;
+    this.logline = 0;
 
     this.rows = 25;
     this.cols = 40;
@@ -188,11 +191,14 @@ export default class Cept {
     if (this.elements.log === undefined)
       return;
     let l = document.createElement("div");
-    // let t = document.createTextNode(m);
     this.elements.log.appendChild(l);
     l.className = "cept-log";
     l.innerHTML = m;
-    // l.appendChild(t);
+    this.elements.log.scrollTop = this.elements.log.scrollHeight;
+    // this.updateScreen();
+    // if (++this.logline == 227) {
+    //   debugger;
+    // }
   }
 
   _randomId() {
@@ -376,6 +382,14 @@ export default class Cept {
 
   init(rows, cols) {
     // FIXME: move (re-)initialization down from constructor
+    this.reset();
+    // FIXME: 1.5.2
+    this.move(0, 0);
+  }
+
+  format(rows, cols) {
+    // FIXME: update internal state to new number of rows and cols
+    // *no* clearing of the screen, since historical terminals just keep the contents
   }
 
   resetClut() {
@@ -532,7 +546,7 @@ export default class Cept {
   clearScreen() {
     this.clear(0, 0, this.cols, this.rows);
     for (var y = 0; y < this.rows; y++) {
-      this.screen.rows[y].bg = this.screenColor;
+      this.screen.rows[y].bg = Cept.COLOR_TRANSPARENT;
     }
   }
 
@@ -540,7 +554,9 @@ export default class Cept {
    * Reset display state. See 3.1 General Display Reset
    */
   reset() {
-
+    this.clearScreen();
+    this.resetClut();
+    this.cursor.visible = false;
   }
 
   fill(x0, y0, w, h, c) {
@@ -644,7 +660,25 @@ export default class Cept {
     }
   }
 
-  nextByte(b) {
-    this.inputstate.nextByte(b);
+  input(...byteArray) {
+    this.inputstate.input(...byteArray);
+  }
+
+  saveState() {
+    return {
+      attr: new CeptAttr(this.attr),
+      cursor: {
+        x: this.cursor.x,
+        y: this.cursor.y,
+        visible: this.cursor.visible
+      },
+    }
+  }
+
+  restoreState(s) {
+    this.attr = new CeptAttr(s.attr);
+    this.cursor.x = s.cursor.x;
+    this.cursor.y = s.cursor.y;
+    this.cursor.visible = s.cursor.visible;
   }
 }

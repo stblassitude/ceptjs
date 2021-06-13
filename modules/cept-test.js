@@ -505,7 +505,7 @@ export default class CeptTest {
     let i = 0;
     i = window.setInterval(e => {
       if (bytes.length > 0) {
-        this.cept.nextByte(bytes.shift());
+        this.cept.input(bytes.shift());
       } else {
         window.clearInterval(i);
      }
