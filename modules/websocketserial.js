@@ -13,6 +13,8 @@ export default class Serial {
       websocket_uri += "/btxws";
     }
 
+    this.buffer = [];
+
     this.btxSocket = new WebSocket(websocket_uri);
     this.btxSocket.binaryType = "arraybuffer";
 
@@ -21,14 +23,20 @@ export default class Serial {
 
     this.btxSocket.onmessage = (event) => {
       if (event.data instanceof ArrayBuffer) {
-        let data = new Uint8Array(event.data)
-        for (let b of data) {
-          this.cept.nextByte(b);
+        // this.cept.input(...new Uint8Array(event.data));
+        for (let b of new Uint8Array(event.data)) {
+          // this.cept.input(b);
+          this.buffer.push(b);
         }
       } else {
         console.log("received data in unsupported format", event.data);
       }
     }
+
+    window.setInterval((e) => {
+      if (this.buffer.length > 0)
+        this.cept.input(this.buffer.shift());
+    }, 10);
   }
 
   send(b) {
