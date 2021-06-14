@@ -28,8 +28,9 @@ Note that some of the US sequences have optional parameters; the sequence termin
 | ------------------------------ | ----------------------------- | ------------------------------------------ | -------------- | --- |
 | US 2/0, 2/1                    | `1f 20` / `1f 21`             | Terminal Facility Identifier               | T/TE 06-05     |     |
 | US 2/3                         | `1f 23`                       | Define DRCS                                | Part 4         |     |
-| US 2/3 2/0 2/0-2/9 *z*         | `1f 23 20` `20`-`29` *z*      | Define DRCS Header for registered code *z* | P4, §2.1, p-2  |     |
-| US 2/3 2/0 2/0-2/9 2/0 *z*     | `1f 23 20` `20`-`29` `20` *z* | Define DRCS Header for custom code *z*     | P4, §2.1, p-2  |     |
+| US 2/3 2/0 2/0-2/9 *z*         | `1f 23 20` `20`-`29` *z*      | Define DRCS Header for registered code *z* | P4, §2.1, p.2  |     |
+| US 2/3 2/0 2/0-2/9 2/0 *z*     | `1f 23 20` `20`-`29` `20` *z* | Define DRCS Header for custom code *z*     | P4, §2.1, p.2  |     |
+| US 2/3 2/1-7/14 ...            | `1f 23` `20`-`7e` ...         | Define DRCS Pattern                        | P4, §3.0, p.6  |     |
 | US 2/6                         | `1f 26`                       | Define Color                               | Part 5         |     |
 | US 2/13                        | `1f 2d`                       | Define format 40x24, with wraparound       | P6, §2, p.1    | ✅  |
 | US 2/13 4/1-4/6                | `1f 2d` `41`-`46`             | Define format *n*, with wraparound         | P6, §2, p.1    | ✅  |
