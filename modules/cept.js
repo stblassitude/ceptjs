@@ -554,6 +554,7 @@ export default class Cept {
    * Reset display state. See 3.1 General Display Reset
    */
   reset() {
+    this.attr = new CeptAttr();
     this.clearScreen();
     this.resetClut();
     this.cursor.visible = false;
