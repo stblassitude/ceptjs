@@ -109,6 +109,7 @@ export default class CeptInputState {
 
   constructor(cept) {
     this.cept = cept;
+    this.lastScreenUpdate = Date.now();
     this.bytes = [];
     this.state = CeptInputState.STATE_INITIAL;
     this.vdpeState = CeptInputState.STATE_VPDE;
@@ -326,6 +327,11 @@ export default class CeptInputState {
         break;
       default:
         this.nextStateInitial();
+    }
+    if (Date.now() > this.lastScreenUpdate + 20) {
+      // update screen after each byte, if at least 20ms have passed (update frequency 50Hz)
+      this.cept.updateScreen();
+      this.lastScreenUpdate = Date.now();
     }
   }
 
@@ -1148,6 +1154,7 @@ export default class CeptInputState {
 
   vpdeResetGeneralReset() {
     this.cept.format(24, 80);
+    this.cept.reset();
     this.vpdeResetControlGraphicsSet();
   }
 
