@@ -21,6 +21,7 @@ class CeptDecoderState {
       this.lastCharset = o.lastCharset;
       this.mosaicHold = o.mosaicHold;
       this.mosaicChar = o.mosaicChar;
+      this.drcsRepertory = [o.drcsRepertory[0], o.drcsRepertory[1]];
     } else {
       this.c1 = CeptInputState.C1_SERIAL;
       this.charset = [0, 2];
@@ -35,6 +36,7 @@ class CeptDecoderState {
       this.lastCharset = -1; // which G set to switch back to when returning from the L set
       this.mosaicHold = false; // in serial C1, print last mosaic instead of space
       this.mosaicChar = " "; // if holdMosaic, print this when processing C1
+      this.drcsRepertory = [0, 0];
     }
   }
 }
@@ -60,6 +62,7 @@ export default class CeptInputState {
   static STATE_ESC_FSFR_B0 = 4;
   static STATE_ESC_FSFR_SCREEN = 5;
   static STATE_ESC_FSFR_ROW = 6;
+  static STATE_ESC_DESIGNATION_GC_DRCS = 7;
 
   static STATE_VPDE = 0;
   static STATE_APA_B1 = 1;
@@ -97,6 +100,9 @@ export default class CeptInputState {
   static CS_MOSAIC_1 = 3;
   static CS_MOSAIC_2 = 4;
   static CS_MOSAIC_3 = 5;
+  static CS_DRCS = -1;
+  static CS_DRCS0 = -1;
+  static CS_DRCS1 = -2;
 
   static CODESETS = [
     CeptCodeSets.PRIMARY,
@@ -194,8 +200,9 @@ export default class CeptInputState {
     this.reset();
   }
 
-  _hex(b) {
-    return ("0" + b.toString(16)).slice(-2);
+  _hex(b, d) {
+    d = d || 2;
+    return ("000000" + b.toString(16)).slice(-d);
   }
 
   /**
@@ -239,28 +246,35 @@ export default class CeptInputState {
    */
   getUnicodeChar(c) {
     let lr = c >> 7;
-    let g = this.decoderState.gset[this.decoderState.charset[lr]];
     c = c & 0x7f;
     if (c < 0x20)
       return -1;
     c -= 0x20; // codeset arrays start at 0x20
+    let g = this.decoderState.gset[this.decoderState.charset[lr]];
+    let u = -1;
+    if (g < 0) {
+      // DRCS: repertory 1 0xe000-0xe05f, repertory 2 0xe080+0xedf
+      u = String.fromCodePoint(Cept.DRCS_PRIVATE_USE_CODE + (1 - g) * 0x80 + c);
+    } else {
+      u = CeptInputState.CODESETS[g][c];
+    }
     if (g == CeptInputState.CS_SUPPLEMENTARY && c >= 0x20 && c <= 0x2f) {
       // combining diacritical
       if (this.combining != "") {
         // last byte was combining already, emit standalone spacing character and save current combining
-        let u = "\u00a0" + this.combining;
-        this.combining = CeptInputState.CODESETS[g][c];
-        return u;
+        let uc = "\u00a0" + this.combining;
+        this.combining = u;
+        return uc;
       }
-      this.combining = CeptInputState.CODESETS[g][c];
+      this.combining = u;
       return -1;
     }
     if (this.combining != "") {
-      let u = CeptInputState.CODESETS[g][c] + this.combining;
+      u += this.combining;
       this.combining = "";
       return u;
     }
-    return CeptInputState.CODESETS[g][c];
+    return u;
   }
 
   writeCharacter(c) {
@@ -268,7 +282,11 @@ export default class CeptInputState {
     if (u != -1) {
       this.lastChar = u;
       this.cept.write(this.lastChar, this.decoderState.c1 == CeptInputState.C1_SERIAL);
-      this.debugSymbols.push(this.lastChar);
+      if (this.lastChar.codePointAt(0) >= 0xe000) {
+        this.debugSymbols.push(this._hex(this.lastChar.codePointAt(0), 4));
+      } else {
+        this.debugSymbols.push(this.lastChar);
+      }
       switch (this.decoderState.gset[this.decoderState.charset[c >> 7]]) {
         case CeptInputState.CS_MOSAIC_1:
         case CeptInputState.CS_MOSAIC_2:
@@ -299,15 +317,21 @@ export default class CeptInputState {
   }
 
   _logFinishLine() {
-    let m = "<span class='hex'>";
-    for (let b of this.debugBytes) {
-      m += " " + this._hex(b);
+    let m = "";
+    if (this.debugBytes.length > 0) {
+      m = "<span class='hex'>";
+      for (let b of this.debugBytes) {
+        m += " " + this._hex(b);
+      }
+      m += "</span>";
     }
-    m += "</span>";
-    for (let b of this.debugSymbols) {
-      m += "<span class='sym'>" + b + "</span>";
+    if (this.debugSymbols.length > 0) {
+      for (let b of this.debugSymbols) {
+        m += "<span class='sym'>" + b + "</span>";
+      }
     }
-    this.cept._log(m);
+    if (m.length > 0)
+      this.cept._log(m);
     this.debugBytes = [];
     this.debugSymbols = [];
   }
@@ -587,30 +611,40 @@ export default class CeptInputState {
         break;
       case CeptInputState.STATE_ESC_DESIGNATION_GC:
         switch (b) {
+          case 0x20:
+            this.escState = CeptInputState.STATE_ESC_DESIGNATION_GC_DRCS;
+            break;
           case 0x21:
             this.escState = CeptInputState.STATE_ESC_DESIGNATION_GC_EXT;
             break;
           case 0x40:
             this.decoderState.gset[this.gsDesignation] = CeptInputState.CS_PRIMARY;
-            this.debugSymbols.push("G" + this.gsDesignation + " <- primary");
-            this.nextStateInitial();
-            break;
-          case 0x63:
-            this.decoderState.gset[this.gsDesignation] = CeptInputState.CS_MOSAIC_2;
-            this.debugSymbols.push("G" + this.gsDesignation + " <- mosaic 2");
+            this.debugSymbols.push(`G${this.gsDesignation} ⬅ primary`);
             this.nextStateInitial();
             break;
           case 0x62:
             this.decoderState.gset[this.gsDesignation] = CeptInputState.CS_SUPPLEMENTARY;
-            this.debugSymbols.push("G" + this.gsDesignation + " <- supplementary");
+            this.debugSymbols.push(`G${this.gsDesignation} ⬅ supplementary`);
+            this.nextStateInitial();
+            break;
+          case 0x63:
+            this.decoderState.gset[this.gsDesignation] = CeptInputState.CS_MOSAIC_2;
+            this.debugSymbols.push(`G${this.gsDesignation} ⬅ mosaic 2`);
             this.nextStateInitial();
             break;
           case 0x64:
             this.decoderState.gset[this.gsDesignation] = CeptInputState.CS_MOSAIC_3;
-            this.debugSymbols.push("G" + this.gsDesignation + " <- mosaic 3");
+            this.debugSymbols.push(`G${this.gsDesignation} ⬅ mosaic 3`);
             this.nextStateInitial();
             break;
           default:
+            let drcsRepertory = this.gsDesignation >> 2;
+            if (this.decoderState.drcsRepertory[drcsRepertory] == b) {
+              this.decoderState.gset[this.gsDesignation & 0x3] = CeptInputState.CS_DRCS - drcsRepertory;
+              this.debugSymbols.push(`G${this.gsDesignation} ⬅ DRCS${drcsRepertory}`);
+            } else {
+              this.debugSymbols.push(`Designate undefined charset ${this._hex(b)}, ignoring`);
+            }
             this.nextStateInitial();
         }
         break;
@@ -618,13 +652,23 @@ export default class CeptInputState {
         switch (b) {
           case 0x40:
             this.decoderState.gset[this.gsDesignation] = CeptInputState.GREEK;
-            this.debugSymbols.push("G" + this.gsDesignation + " <- greek");
+            this.debugSymbols.push(`G${this.gsDesignation} ⬅ greek`);
             this.nextStateInitial();
             break;
           default:
+            this.debugSymbols.push(`Designate undefined charset 21 ${this._hex(b)}, ignoring`);
             this.nextStateInitial();
         }
         break;
+      case CeptInputState.STATE_ESC_DESIGNATION_GC_DRCS:
+        let drcsRepertory = this.gsDesignation >> 2;
+        if (this.decoderState.drcsRepertory[drcsRepertory] == b) {
+          this.decoderState.gset[this.gsDesignation & 0x3] = CeptInputState.CS_DRCS + drcsRepertory;
+          this.debugSymbols.push(`G${this.gsDesignation} ⬅ DRCS${drcsRepertory}`);
+        } else {
+          this.debugSymbols.push(`Designate undefined charset 20 ${this._hex(b)}, ignoring`);
+        }
+        this.nextStateInitial();
       default:
         this.nextStateInitial();
     }
@@ -866,9 +910,9 @@ export default class CeptInputState {
             this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER;
             this.vdpeDrcsStep = 0;
             break;
-            // case 0x21:
-            //   this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_PATTERN;
-            //   break;
+          case 0x21:
+            this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_PATTERN;
+            break;
           default:
             this.state = CeptInputState.STATE_VPDE_UNKNOWN;
             this.debugSymbols.push("Unknown DRCS unit " + this._hex(b));
@@ -905,6 +949,7 @@ export default class CeptInputState {
           done = true;
         }
         if (done) {
+          this.decoderState.drcsRepertory[this.drcsDefinition.repertory] = this.drcsDefinition.char;
           this.debugSymbols.push("DRCS header: rep. " + this.drcsDefinition.repertory + ", " +
             (this.drcsDefinition.delete ? "delete" : "keep") +
             ", #" + this.drcsDefinition.char +
@@ -969,6 +1014,8 @@ export default class CeptInputState {
         }
         this.vdpeDrcsStep = 3;
         this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER;
+        break;
+      case CeptInputState.STATE_VPDE_DEFINE_DRCS_PATTERN:
         break;
     }
   }

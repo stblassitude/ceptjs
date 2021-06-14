@@ -107,6 +107,9 @@ export default class Cept {
   static SIZE_DOUBLE_HEIGHT_BELOW = 3;
   static SIZE_DOUBLE_SIZE = 4;
 
+  // DRCS are coded starting at this code point (the beginning of the Unicode BMP PUA)
+  static DRCS_PRIVATE_USE_CODE = 0xe000;
+
   constructor(selector, options={}) {
     this.elements = {};
     if (selector instanceof HTMLElement) {
