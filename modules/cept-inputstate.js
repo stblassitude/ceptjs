@@ -79,6 +79,8 @@ export default class CeptInputState {
   static STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM = 7;
   static STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SCM_ST = 8;
   static STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SSA = 9;
+  static STATE_VPDE_DEFINE_DRCS_PATTERN_START = 10;
+  static STATE_VPDE_DEFINE_DRCS_PATTERN_DATA = 11;
 
   static STATE_VPDE_DEFINE_FORMAT_INITIAL = 0;
   static STATE_VPDE_DEFINE_FORMAT_PARAMS = 1;
@@ -910,12 +912,14 @@ export default class CeptInputState {
             this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER;
             this.vdpeDrcsStep = 0;
             break;
-          case 0x21:
-            this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_PATTERN;
-            break;
           default:
-            this.state = CeptInputState.STATE_VPDE_UNKNOWN;
-            this.debugSymbols.push("Unknown DRCS unit " + this._hex(b));
+            if (b >= 0x21 && b <= 0x7e) {
+              this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_PATTERN;
+              this.unshiftByte(b);
+            } else {
+              this.state = CeptInputState.STATE_VPDE_UNKNOWN;
+              this.debugSymbols.push("Unknown DRCS unit " + this._hex(b));
+            }
         }
         break;
       case CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER:
@@ -1016,8 +1020,45 @@ export default class CeptInputState {
         this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER;
         break;
       case CeptInputState.STATE_VPDE_DEFINE_DRCS_PATTERN:
+        this.drcsPatternChar = b;
+        this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_PATTERN_START;
+        this.debugSymbols.push(`DRCS pattern start at #${this._hex(this.drcsPatternChar)}`);
+        this._logFinishLine();
+        break;
+      case CeptInputState.STATE_VPDE_DEFINE_DRCS_PATTERN_START:
+        if (b != 0x30) {
+          this.unshiftByte(b);
+          this.state = CeptInputState.STATE_VPDE_UNKNOWN;
+          this.debugSymbols.push(`DRCS invalid pattern start ${this._hex(b)}`);
+        }
+        this.drcsPatternData = [];
+        this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_PATTERN_DATA;
+        break;
+      case CeptInputState.STATE_VPDE_DEFINE_DRCS_PATTERN_DATA:
+        if (b >= 0x20 && b <= 0x7f) {
+          if (b == 0x30) {
+            this.drcsDefineChar();
+            this.unshiftByte(b);
+            this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_PATTERN_START;
+          } else {
+            this.drcsPatternData.push(b);
+          }
+        } else {
+          this.drcsDefineChar();
+          this.unshiftByte(b);
+          this.nextStateInitial();
+        }
         break;
     }
+  }
+
+  drcsDefineChar() {
+    // do something with this.drcsPatternData
+
+    this.debugSymbols.push(`DRCS #${this._hex(this.drcsPatternChar)} defined with ${this.drcsPatternData.length} bytes`);
+    this._logNextLine();
+
+    this.drcsPatternChar++;
   }
 
   /**
