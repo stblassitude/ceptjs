@@ -374,25 +374,24 @@ export default class CeptTest {
     let bytes = [];
 
     bytes = bytes.concat([
-      0x1f, 0x2d,
-      0x0c, 0x14, // CS, COF
-      0x1b, 0x22, 0x41, // ESC 2/2 4/1, switch to parallel C1
+      0x1f, 0x2d, // US DEFINE FORMAT 40x24
+      0x1f, 0x2f, 0x42, // US RESET General, parallel C1
+      // 0x0c, 0x14, // CS, COF
       0x9b, 0x31, 0x40, // CT2
       0x1b, 0x23, 0x20, 0x54, // ESC 2/3 2/1 full screen BLB
       0x9b, 0x30, 0x40, // CT1
-      0x8c, 0x87, 0x9e, // NSZ, WHF, TRB
     ]);
     bytes = bytes.concat(this.encodeString("Test Pages"));
     bytes = bytes.concat(this.moveTo(1, 40 - 6));
     bytes = bytes.concat(this.encodeString("DM 0,00"));
     bytes = bytes.concat([
-      0x1b, 0x22, 0x41, // ESC 2/2 4/1, switch to parallel C1
-      0x9b, 0x30, 0x40, // CT1
-      0x8c, 0x87, 0x9e, 0x89, // NSZ, WHF, TRB, STD
+      0x1f, 0x2f, 0x45, 0x58, // RESET service break row 24
+      0x20, 0x12, 0x5f, // space RPT 32
     ]);
-    bytes = bytes.concat(this.moveTo(24, 40 - 7));
     bytes = bytes.concat(this.encodeString("1234567a"));
-    bytes = bytes.concat(this.moveTo(2, 1));
+    bytes = bytes.concat([
+      0x1f, 0x2f, 0x4f, // RESET service break reset
+    ]);
 
     bytes = bytes.concat([
       0x1b, 0x23, 0x21, 0x54, // ESC 2/3 2/1 full row BLB
