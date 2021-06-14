@@ -107,6 +107,56 @@ export default class CeptInputState {
     CeptCodeSets.SUPP_MOSAIC_3,
   ];
 
+  static DRCS_PIXEL_FORMATS = [{
+    w: 16,
+    h: 24
+  }, {
+    w: 16,
+    h: 20
+  }, {
+    w: 16,
+    h: 12
+  }, {
+    w: 16,
+    h: 10
+  }, {
+    w: 12,
+    h: 24
+  }, {
+    w: 12,
+    h: 20
+  }, {
+    w: 12,
+    h: 12
+  }, {
+    w: 12,
+    h: 10
+  }, {
+    w: 8,
+    h: 12
+  }, {
+    w: 8,
+    h: 10
+  }, {
+    w: 6,
+    h: 12
+  }, {
+    w: 6,
+    h: 10
+  }, {
+    w: 6,
+    h: 5
+  }, {
+    w: 4,
+    h: 10
+  }, {
+    w: 4,
+    h: 5
+  }, {
+    w: 6,
+    h: 6
+  }];
+
   constructor(cept) {
     this.cept = cept;
     this.lastScreenUpdate = Date.now();
@@ -837,72 +887,9 @@ export default class CeptInputState {
           this._paramsAccumulate(b);
           this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC1_PARAMS;
         } else if (this.vdpeDrcsStep <= 1 && b >= 0x40 && b <= 0x4f) {
-          switch (b & 0x0f) {
-            case 0:
-              this.drcsDefinition.pixelWidth = 16;
-              this.drcsDefinition.pixelHeight = 24;
-              break;
-            case 1:
-              this.drcsDefinition.pixelWidth = 16;
-              this.drcsDefinition.pixelHeight = 20;
-              break;
-            case 2:
-              this.drcsDefinition.pixelWidth = 16;
-              this.drcsDefinition.pixelHeight = 12;
-              break;
-            case 3:
-              this.drcsDefinition.pixelWidth = 16;
-              this.drcsDefinition.pixelHeight = 10;
-              break;
-            case 4:
-              this.drcsDefinition.pixelWidth = 12;
-              this.drcsDefinition.pixelHeight = 24;
-              break;
-            case 5:
-              this.drcsDefinition.pixelWidth = 12;
-              this.drcsDefinition.pixelHeight = 20;
-              break;
-            case 6:
-              this.drcsDefinition.pixelWidth = 12;
-              this.drcsDefinition.pixelHeight = 12;
-              break;
-            case 7:
-              this.drcsDefinition.pixelWidth = 12;
-              this.drcsDefinition.pixelHeight = 10;
-              break;
-            case 8:
-              this.drcsDefinition.pixelWidth = 8;
-              this.drcsDefinition.pixelHeight = 12;
-              break;
-            case 9:
-              this.drcsDefinition.pixelWidth = 8;
-              this.drcsDefinition.pixelHeight = 10;
-              break;
-            case 10:
-              this.drcsDefinition.pixelWidth = 6;
-              this.drcsDefinition.pixelHeight = 12;
-              break;
-            case 11:
-              this.drcsDefinition.pixelWidth = 6;
-              this.drcsDefinition.pixelHeight = 10;
-              break;
-            case 12:
-              this.drcsDefinition.pixelWidth = 6;
-              this.drcsDefinition.pixelHeight = 5;
-              break;
-            case 13:
-              this.drcsDefinition.pixelWidth = 4;
-              this.drcsDefinition.pixelHeight = 10;
-              break;
-            case 14:
-              this.drcsDefinition.pixelWidth = 4;
-              this.drcsDefinition.pixelHeight = 5;
-              break;
-            case 15:
-              this.drcsDefinition.pixelWidth = 6;
-              this.drcsDefinition.pixelHeight = 6;
-              break;
-          }
+          let pixel = CeptInputState.DRCS_PIXEL_FORMATS[b & 0x0f];
+          this.drcsDefinition.pixelWidth = pixel.w;
+          this.drcsDefinition.pixelHeight = pixel.h;
           this._paramsInit();
           this.vdpeDrcsState = CeptInputState.STATE_VPDE_DEFINE_DRCS_HEADER_ICS_SDC2_PARAMS;
         } else if (this.vdpeDrcsStep <= 2 && b >= 0x50 && b <= 0x5f) {
@@ -919,8 +906,8 @@ export default class CeptInputState {
         }
         if (done) {
           this.debugSymbols.push("DRCS header: rep. " + this.drcsDefinition.repertory + ", " +
-            ( this.drcsDefinition.delete ? "delete" : "keep") +
-             ", #" + this.drcsDefinition.char +
+            (this.drcsDefinition.delete ? "delete" : "keep") +
+            ", #" + this.drcsDefinition.char +
             ", (" + this.drcsDefinition.pixelWidth + "×" + this.drcsDefinition.pixelHeight +
             ")px, (" + this.drcsDefinition.cellWidth + "×" + this.drcsDefinition.cellHeight +
             ")c, " + this.drcsDefinition.bpp + "bpp"
