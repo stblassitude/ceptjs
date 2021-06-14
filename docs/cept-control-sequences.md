@@ -195,7 +195,7 @@ The parallel attribute definitions are also used for full screen and full row at
 | ESC 2/3 2/0 Fe   | `1b 23 20` `40`-`5f` | Full screen attributes                            | P1, §3.5.2, p.88 | ✅  |
 | ESC 2/3 2/1 Fe   | `1b 23 21` `40`-`5f` | Full row attributes                               | P1, §3.5.2, p.88 | ✅  |
 | ESC 4/0-5/15     | `1b` `40`-`45`       | Supplementary Control Set C1, see above           |                  | ✅  |
-| ESC 2/8 2/0 4/0  | `1b 28 21 40`        | Select DRCS0 for G0                               | P4, §5.0, p.14   | ✅  |
+| ESC 2/8 2/0 4/0  | `1b 28 20 40`        | Select DRCS0 for G0                               | P4, §5.0, p.14   | ✅  |
 | ESC 2/8 2/1 4/0  | `1b 28 21 40`        | Select Greek for G0                               | P1, §3.4.4, p.87 | ✅  |
 | ESC 2/8 4/0      | `1b 28 40`           | Select Latin Primary for G0                       | P1, §3.4.4, p.87 | ✅  |
 | ESC 2/8 6/2      | `1b 28 62`           | Select Supplementary Graphic for G0               | P1, §3.4.4, p.87 | ✅  |
@@ -207,22 +207,22 @@ The parallel attribute definitions are also used for full screen and full row at
 | ESC 2/9 6/2      | `1b 29 62`           | Select Supplementary Graphic for G1               | P1, §3.4.4, p.87 | ✅  |
 | ESC 2/9 6/3      | `1b 29 63`           | Select 2nd Supplementary Mosaic for G1            | P1, §3.4.4, p.87 | ✅  |
 | ESC 2/9 6/4      | `1b 2a 64`           | Select 3rd Supplementary Mosaic for G1            | P1, §3.4.4, p.87 | ✅  |
-| ESC 2/10 2/0 4/0 | `1b 2a 21 40`        | Select DRCS0 for G2                               | P4, §5.0, p.14   | ✅  |
+| ESC 2/10 2/0 4/0 | `1b 2a 20 40`        | Select DRCS0 for G2                               | P4, §5.0, p.14   | ✅  |
 | ESC 2/10 2/1 4/0 | `1b 2a 21 40`        | Select Greek for G2                               | P1, §3.4.4, p.87 | ✅  |
 | ESC 2/10 4/0     | `1b 2a 40`           | Select Latin Primary for G2                       | P1, §3.4.4, p.87 | ✅  |
 | ESC 2/10 6/2     | `1b 2a 62`           | Select Supplementary Graphic for G2               | P1, §3.4.4, p.87 | ✅  |
 | ESC 2/10 6/3     | `1b 2a 63`           | Select 2nd Supplementary Mosaic for G2            | P1, §3.4.4, p.87 | ✅  |
 | ESC 2/10 6/4     | `1b 2a 64`           | Select 3rd Supplementary Mosaic for G2            | P1, §3.4.4, p.87 | ✅  |
-| ESC 2/11 2/0 4/0 | `1b 2b 21 40`        | Select DRCS0 for G3                               | P4, §5.0, p.14   | ✅  |
+| ESC 2/11 2/0 4/0 | `1b 2b 20 40`        | Select DRCS0 for G3                               | P4, §5.0, p.14   | ✅  |
 | ESC 2/11 2/1 4/0 | `1b 2b 21 40`        | Select Greek for G3                               | P1, §3.4.4, p.87 | ✅  |
 | ESC 2/11 4/0     | `1b 2b 40`           | Select Latin Primary for G3                       | P1, §3.4.4, p.87 | ✅  |
 | ESC 2/11 6/2     | `1b 2b 62`           | Select Supplementary Graphic for G3               | P1, §3.4.4, p.87 | ✅  |
 | ESC 2/11 6/3     | `1b 2b 63`           | Select 2nd Supplementary Mosaic for G3            | P1, §3.4.4, p.87 | ✅  |
 | ESC 2/11 6/4     | `1b 2b 64`           | Select 3rd Supplementary Mosaic for G3            | P1, §3.4.4, p.87 | ✅  |
-| ESC 2/12 2/0 4/0 | `1b 2c 21 40`        | Select DRCS1 for G0                               | P4, §5.0, p.14   | ✅  |
-| ESC 2/13 2/0 4/0 | `1b 2d 21 40`        | Select DRCS1 for G1                               | P4, §5.0, p.14   | ✅  |
-| ESC 2/14 2/0 4/0 | `1b 2e 21 40`        | Select DRCS1 for G2                               | P4, §5.0, p.14   | ✅  |
-| ESC 2/15 2/0 4/0 | `1b 2f 21 40`        | Select DRCS1 for G3                               | P4, §5.0, p.14   | ✅  |
+| ESC 2/12 2/0 4/0 | `1b 2c 20 40`        | Select DRCS1 for G0                               | P4, §5.0, p.14   | ✅  |
+| ESC 2/13 2/0 4/0 | `1b 2d 20 40`        | Select DRCS1 for G1                               | P4, §5.0, p.14   | ✅  |
+| ESC 2/14 2/0 4/0 | `1b 2e 20 40`        | Select DRCS1 for G2                               | P4, §5.0, p.14   | ✅  |
+| ESC 2/15 2/0 4/0 | `1b 2f 20 40`        | Select DRCS1 for G3                               | P4, §5.0, p.14   | ✅  |
 | ESC 3/5          | `1b 35`              | RDW: Recording device wait                        | P1, §3.6.2, p.92 |     |
 | ESC 3/6          | `1b 36`              | RDS: Recording device start                       | P1, §3.6.2, p.92 |     |
 | ESC 3/7          | `1b 37`              | RDT: Recording device stop                        | P1, §3.6.2, p.92 |     |
