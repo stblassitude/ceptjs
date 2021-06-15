@@ -240,6 +240,19 @@ export default class CeptInputState {
   }
 
   /**
+   * Get the Unicode code point for a DRC. Each repertory can contain 94 characters (0x21 to 0x7e).
+   */
+  getDrcsCodePoint(repertory, c) {
+    if (c < 0x21 || c > 0x7e) {
+      throw `invalid DRC code point 0x${this._hex(c)}`;
+    }
+    if (repertory < 0 || repertory > 1) {
+      throw `invalid DRC code repertory 0x${repertory}`;
+    }
+    return repertory * 94 + c - 0x21;
+  }
+
+  /**
    * Decode character byte c from the sets currently in effect, taking
    * combining characters into account. When encountering a combining character
    * as the beginning of a combining pair, save it and return -1.
@@ -251,16 +264,21 @@ export default class CeptInputState {
     c = c & 0x7f;
     if (c < 0x20)
       return -1;
-    c -= 0x20; // codeset arrays start at 0x20
     let g = this.decoderState.gset[this.decoderState.charset[lr]];
     let u = -1;
     if (g < 0) {
-      // DRCS: repertory 1 0xe000-0xe05f, repertory 2 0xe080+0xedf
-      u = String.fromCodePoint(Cept.DRCS_PRIVATE_USE_CODE + (1 - g) * 0x80 + c);
+      if (c == 0x20) {
+        u = " ";
+      } else if (c == 0x7f) {
+        u = "\u25a0";
+      } else {
+        // DRCS: repertory 1 0xe000-0xe05f, repertory 2 0xe080+0xedf
+        u = String.fromCodePoint(Cept.DRCS_PRIVATE_USE_CODE + this.getDrcsCodePoint((-1 - g), c));
+      }
     } else {
-      u = CeptInputState.CODESETS[g][c];
+      u = CeptInputState.CODESETS[g][c - 0x20];
     }
-    if (g == CeptInputState.CS_SUPPLEMENTARY && c >= 0x20 && c <= 0x2f) {
+    if (g == CeptInputState.CS_SUPPLEMENTARY && c >= 0x40 && c <= 0x4f) {
       // combining diacritical
       if (this.combining != "") {
         // last byte was combining already, emit standalone spacing character and save current combining
@@ -621,29 +639,29 @@ export default class CeptInputState {
             break;
           case 0x40:
             this.decoderState.gset[this.gsDesignation] = CeptInputState.CS_PRIMARY;
-            this.debugSymbols.push(`G${this.gsDesignation} ⬅ primary`);
+            this.debugSymbols.push(`G${this.gsDesignation} ← primary`);
             this.nextStateInitial();
             break;
           case 0x62:
             this.decoderState.gset[this.gsDesignation] = CeptInputState.CS_SUPPLEMENTARY;
-            this.debugSymbols.push(`G${this.gsDesignation} ⬅ supplementary`);
+            this.debugSymbols.push(`G${this.gsDesignation} ← supplementary`);
             this.nextStateInitial();
             break;
           case 0x63:
             this.decoderState.gset[this.gsDesignation] = CeptInputState.CS_MOSAIC_2;
-            this.debugSymbols.push(`G${this.gsDesignation} ⬅ mosaic 2`);
+            this.debugSymbols.push(`G${this.gsDesignation} ← mosaic 2`);
             this.nextStateInitial();
             break;
           case 0x64:
             this.decoderState.gset[this.gsDesignation] = CeptInputState.CS_MOSAIC_3;
-            this.debugSymbols.push(`G${this.gsDesignation} ⬅ mosaic 3`);
+            this.debugSymbols.push(`G${this.gsDesignation} ← mosaic 3`);
             this.nextStateInitial();
             break;
           default:
             let drcsRepertory = this.gsDesignation >> 2;
             if (this.decoderState.drcsRepertory[drcsRepertory] == b) {
               this.decoderState.gset[this.gsDesignation & 0x3] = CeptInputState.CS_DRCS - drcsRepertory;
-              this.debugSymbols.push(`G${this.gsDesignation} ⬅ DRCS${drcsRepertory}`);
+              this.debugSymbols.push(`G${this.gsDesignation} ← DRCS${drcsRepertory}`);
             } else {
               this.debugSymbols.push(`Designate undefined charset ${this._hex(b)}, ignoring`);
             }
@@ -654,7 +672,7 @@ export default class CeptInputState {
         switch (b) {
           case 0x40:
             this.decoderState.gset[this.gsDesignation] = CeptInputState.GREEK;
-            this.debugSymbols.push(`G${this.gsDesignation} ⬅ greek`);
+            this.debugSymbols.push(`G${this.gsDesignation} ← greek`);
             this.nextStateInitial();
             break;
           default:
@@ -666,7 +684,7 @@ export default class CeptInputState {
         let drcsRepertory = this.gsDesignation >> 2;
         if (this.decoderState.drcsRepertory[drcsRepertory] == b) {
           this.decoderState.gset[this.gsDesignation & 0x3] = CeptInputState.CS_DRCS + drcsRepertory;
-          this.debugSymbols.push(`G${this.gsDesignation} ⬅ DRCS${drcsRepertory}`);
+          this.debugSymbols.push(`G${this.gsDesignation} ← DRCS${drcsRepertory}`);
         } else {
           this.debugSymbols.push(`Designate undefined charset 20 ${this._hex(b)}, ignoring`);
         }
@@ -1053,9 +1071,37 @@ export default class CeptInputState {
   }
 
   drcsDefineChar() {
+    this.drcsPixels = new Array(this.drcsDefinition.pixelWidth * this.drcsDefinition.pixelHeight);
     // do something with this.drcsPatternData
-
-    this.debugSymbols.push(`DRCS #${this._hex(this.drcsPatternChar)} defined with ${this.drcsPatternData.length} bytes`);
+    if (this.drcsDefinition.codingType == 0) {
+      let x = 0;
+      let y = 0;
+      let p = 1;
+      for (let b of this.drcsPatternData) {
+        // console.log(`DRCS x=${x}/y=${y}, b=${this._hex(b)}`)
+        if (b >= 0x40 && b <= 0x7f) {
+          for (let i = 6; i--;) {
+            this.drcsPixels[y * this.drcsDefinition.pixelWidth + x] |= (b & (1 << i)) != 0 ? p : 0;
+            x++;
+            if (x >= this.drcsDefinition.pixelWidth) {
+              x = 0;
+              y++;
+            }
+          }
+        } else {
+          switch (b) {
+            default:
+              // invalid value
+          }
+        }
+      }
+      this.cept.defineDrcs(this.getDrcsCodePoint(this.drcsDefinition.repertory, this.drcsPatternChar), this.drcsDefinition, this.drcsPixels);
+      this.debugSymbols.push(`DRCS #${this._hex(this.drcsPatternChar)} defined with direct coding with ${this.drcsPatternData.length} bytes`);
+    } else if (this.drcsDefinition.codingType == 1) {
+      this.debugSymbols.push(`DRCS #${this._hex(this.drcsPatternChar)} defined with runlength coding with ${this.drcsPatternData.length} bytes`);
+    } else {
+      this.debugSymbols.push(`DRCS #${this._hex(this.drcsPatternChar)}: unknown coding type ${this.drcsDefinition.codingType}`);
+    }
     this._logNextLine();
 
     this.drcsPatternChar++;

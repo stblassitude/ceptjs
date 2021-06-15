@@ -39,6 +39,17 @@
 .cept-span {
   display: inline-block;
   transform-origin: left bottom;
+  vertical-align: text-top;
+
+  /* outline: 1px solid blue; */
+}
+
+svg.cept-span {
+  fill: currentColor;
+  line-height: 1;
+  height: 1em;
+  width: .5em;
+  display: inline-block;
 }
 
 .cept-ul {

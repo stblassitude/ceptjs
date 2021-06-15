@@ -23,11 +23,11 @@ export default class Serial {
 
     this.btxSocket.onmessage = (event) => {
       if (event.data instanceof ArrayBuffer) {
-        this.cept.input(...new Uint8Array(event.data));
-        // for (let b of new Uint8Array(event.data)) {
-        //   this.cept.input(b);
-        //   this.buffer.push(b);
-        // }
+        // this.cept.input(...new Uint8Array(event.data));
+        for (let b of new Uint8Array(event.data)) {
+          // this.cept.input(b);
+          this.buffer.push(b);
+        }
       } else {
         console.log("received data in unsupported format", event.data);
       }

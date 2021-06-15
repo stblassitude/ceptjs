@@ -24,23 +24,23 @@ class CeptAttr {
   }
 
   equals(b) {
-    return this.char == b.char
-      && this.equalsAttrs(b);
+    return this.char == b.char &&
+      this.equalsAttrs(b);
   }
 
   equalsAttrs(b) {
-    return this.bg == b.bg
-    && this.fg == b.fg
-    && this.conceal == b.conceal
-    && this.flashf == b.flashf
-    && this.flashi == b.flashi
-    && this.flashp == b.flashp
-    && this.flashr == b.flashr
-    && this.inv == b.inv
-    && this.marked == b.marked
-    && this.protected == b.protected
-    && this.size == b.size
-    && this.underline == b.underline
+    return this.bg == b.bg &&
+      this.fg == b.fg &&
+      this.conceal == b.conceal &&
+      this.flashf == b.flashf &&
+      this.flashi == b.flashi &&
+      this.flashp == b.flashp &&
+      this.flashr == b.flashr &&
+      this.inv == b.inv &&
+      this.marked == b.marked &&
+      this.protected == b.protected &&
+      this.size == b.size &&
+      this.underline == b.underline
   }
 }
 
@@ -65,12 +65,12 @@ class CeptScreenRow {
   }
 
   equals(b) {
-    if (this.bg != b.bg
-      || this.cols != b.cols
-      || this.attr.length != b.attr.length) {
-        return false;
-      }
-    for (var i=0; i < this.attr.length; i++) {
+    if (this.bg != b.bg ||
+      this.cols != b.cols ||
+      this.attr.length != b.attr.length) {
+      return false;
+    }
+    for (var i = 0; i < this.attr.length; i++) {
       if (!this.attr[i].equals(b.attr[i])) {
         return false;
       }
@@ -110,7 +110,7 @@ export default class Cept {
   // DRCS are coded starting at this code point (the beginning of the Unicode BMP PUA)
   static DRCS_PRIVATE_USE_CODE = 0xe000;
 
-  constructor(selector, options={}) {
+  constructor(selector, options = {}) {
     this.elements = {};
     if (selector instanceof HTMLElement) {
       this.elements.container = selector;
@@ -128,7 +128,11 @@ export default class Cept {
     this.rows = 25;
     this.cols = 40;
 
-    this.cursor = { x: 0, y: 0, visible: false };
+    this.cursor = {
+      x: 0,
+      y: 0,
+      visible: false
+    };
     this.attr = new CeptAttr();
     this.reveal = false;
 
@@ -181,12 +185,32 @@ export default class Cept {
     }
     this.elements.screen.appendChild(this.elements.below);
 
-    this.clear(10, 10, 20, 5);
+    this.elements.symbols = document.getElementById("cept-svg-symbols");
+    if (this.elements.symbols == undefined) {
+      this.elements.symbols = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      this.elements.symbols.setAttributeNS(null, "id", "cept-svg-symbols");
+      this.elements.symbols.setAttributeNS(null, "height", "1");
+      this.elements.symbols.setAttributeNS(null, "width", "1");
+      this.elements.symbols.setAttributeNS(null, "viewBox", "0 0 1 1");
+      this.elements.container.appendChild(this.elements.symbols);
+    }
+    let symbol = document.createElementNS("http://www.w3.org/2000/svg", "symbol");
+    symbol.setAttributeNS(null, "id", "cept-px");
+    symbol.setAttributeNS(null, "height", "1");
+    symbol.setAttributeNS(null, "width", "1");
+    symbol.setAttributeNS(null, "viewBox", "0 0 1 1");
+    let pixel = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    pixel.setAttributeNS(null, "height", "1");
+    pixel.setAttributeNS(null, "width", "1");
+    pixel.setAttributeNS(null, "x", "0");
+    pixel.setAttributeNS(null, "y", "0");
+    symbol.appendChild(pixel);
+    this.elements.symbols.replaceChildren(symbol);
 
     this.inputstate = new CeptInputState(this);
 
     // do this last so no interval is running unless initialization was successful
-    window.setInterval(this._flashInterval.bind(this), 1000/6);
+    window.setInterval(this._flashInterval.bind(this), 1000 / 6);
     this._log("<span class='sym'>initialized</span>");
   }
 
@@ -199,7 +223,7 @@ export default class Cept {
     l.innerHTML = m;
     this.elements.log.scrollTop = this.elements.log.scrollHeight;
     // this.updateScreen();
-    // if (++this.logline == 227) {
+    // if (++this.logline == 245) {
     //   debugger;
     // }
   }
@@ -231,7 +255,7 @@ export default class Cept {
       return row.bg;
     if (!this._isTransparent(this.screen.bg))
       return this.screen.bg;
-    return [0,0,0,1];
+    return [0, 0, 0, 1];
   }
 
   /**
@@ -251,6 +275,29 @@ export default class Cept {
     return s;
   }
 
+  _isDrcs(attr) {
+    let c = attr.char.codePointAt(0);
+    return c >= Cept.DRCS_PRIVATE_USE_CODE && c < (Cept.DRCS_PRIVATE_USE_CODE + 2 * 94);
+  }
+
+  _spanForDrcs(attr) {
+    let char = attr.char.codePointAt(0);
+    let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    // svg.setAttributeNS(null, "height", "1");
+    // svg.setAttributeNS(null, "width", "1");
+    svg.setAttributeNS(null, "viewBox", "0 0 12 10");
+    svg.setAttributeNS(null, "preserveAspectRatio", "none");
+    svg.classList.add("cept-span", this._bgClass(attr.bg), this._fgClass(attr.fg));
+
+    let use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    use.setAttributeNS(null, "href", `#${this.drcsCharId(char - Cept.DRCS_PRIVATE_USE_CODE)}`);
+    use.setAttributeNS(null, "x", 0);
+    use.setAttributeNS(null, "y", 0);
+    svg.appendChild(use);
+
+    return svg;
+  }
+
   /**
    * Create a list of spans for the different formatting on a row. Returns
    * the (potentially unchanged) row, and updates the spans array.
@@ -262,9 +309,9 @@ export default class Cept {
     var text = "";
     for (var x = 0; x < this.cols; x++) {
       Object.assign(nextAttr, row.attr[x]);
-      if ((nextAttr.flashf == 1 && (~~(this.flashp / 3) != nextAttr.flashp ^ nextAttr.flashi))
-          || (nextAttr.flashf == 2 && (~~(this.flashp / 2) != nextAttr.flashp) ^ nextAttr.flashi)) {
-         // flash between palette 0/1 or 2/3, "reduced intensity flash"
+      if ((nextAttr.flashf == 1 && (~~(this.flashp / 3) != nextAttr.flashp ^ nextAttr.flashi)) ||
+        (nextAttr.flashf == 2 && (~~(this.flashp / 2) != nextAttr.flashp) ^ nextAttr.flashi)) {
+        // flash between palette 0/1 or 2/3, "reduced intensity flash"
         nextAttr.fg = nextAttr.flashr ? nextAttr.fg ^ 8 : nextAttr.bg;
       }
       if (nextAttr.inv) {
@@ -279,14 +326,18 @@ export default class Cept {
       nextAttr.fg = this._effectiveColor(nextAttr.fg, row);
       Object.assign(row.attr[x], nextAttr);
       // if not the same as before, emit span and start a new one
-      if (!lastAttr.equalsAttrs(nextAttr)) {
+      if (!lastAttr.equalsAttrs(nextAttr) || this._isDrcs(nextAttr)) {
         if (text != "") {
           spans.push(this._spanForAttr(lastAttr, text));
         }
         Object.assign(lastAttr, nextAttr);
         text = "";
       }
-      text += nextAttr.char;
+      if (this._isDrcs(nextAttr)) {
+        spans.push(this._spanForDrcs(nextAttr));
+      } else {
+        text += nextAttr.char;
+      }
     }
     spans.push(this._spanForAttr(lastAttr, text));
     return spans;
@@ -296,25 +347,25 @@ export default class Cept {
    * Put spaces into positions where double wide/height/size characters are
    */
   _blankOutDoubles(row, y) {
-    for (var x = 0; x < this.cols-1; x++) {
+    for (var x = 0; x < this.cols - 1; x++) {
       if (row.attr[x].size == Cept.SIZE_DOUBLE_WIDTH) {
-        row.attr[x+1].char = " "
+        row.attr[x + 1].char = " "
       }
     }
     if (y > 0) {
       for (var x = 0; x < this.cols; x++) {
-        var size = this.screen.rows[y-1].attr[x].size;
+        var size = this.screen.rows[y - 1].attr[x].size;
         if (size == Cept.SIZE_DOUBLE_HEIGHT_BELOW) {
           row.attr[x].char = " ";
         }
       }
     }
-    if (y < this.rows-1) {
+    if (y < this.rows - 1) {
       for (var x = 0; x < this.cols; x++) {
-        var size = this.screen.rows[y+1].attr[x].size;
+        var size = this.screen.rows[y + 1].attr[x].size;
         if (size == Cept.SIZE_DOUBLE_SIZE) {
           row.attr[x].char = " ";
-          row.attr[x+1].char = " ";
+          row.attr[x + 1].char = " ";
         } else if (size == Cept.SIZE_DOUBLE_HEIGHT_ABOVE) {
           row.attr[x].char = " ";
         }
@@ -365,11 +416,12 @@ export default class Cept {
     for (var i = 0; i < 32; i++) {
       if (this.elements.sheet.cssRules.length > i)
         this.elements.sheet.deleteRule(i);
-      this.elements.sheet.insertRule("." + this._fgClass(i) + " { color: " + this._rgba_from_clut(i) + "}", i);
+        this.elements.sheet.insertRule(`.${this._fgClass(i)} { color: ${this._rgba_from_clut(i)};`, i);
+        // this.elements.sheet.insertRule(`.${this._fgClass(i)} { color: ${this._rgba_from_clut(i)}; fill: ${this._rgba_from_clut(i)}`, i);
     }
     for (var i = 0; i < 32; i++) {
-      if (this.elements.sheet.cssRules.length > i+32)
-        this.elements.sheet.deleteRule(i+32);
+      if (this.elements.sheet.cssRules.length > i + 32)
+        this.elements.sheet.deleteRule(i + 32);
       this.elements.sheet.insertRule("." + this._bgClass(i) + " { background-color: " + this._rgba_from_clut(i) + "}", i);
     }
   }
@@ -433,6 +485,46 @@ export default class Cept {
       [0, 255, 255, 1],
       [255, 255, 255, 1],
     ];
+  }
+
+  drcsCharId(char) {
+    return `${this.elements.screen.id}-drcs-${char}`;
+  }
+
+  defineDrcs(char, definition, pixels) {
+    let name = this.drcsCharId(char);
+    let symbol = document.getElementById(name);
+    if (symbol == undefined) {
+      symbol = document.createElementNS("http://www.w3.org/2000/svg", "symbol");
+      symbol.setAttributeNS(null, "id", name);
+      symbol.setAttributeNS(null, "height", definition.pixelHeight);
+      symbol.setAttributeNS(null, "width", definition.pixelWidth);
+      symbol.setAttributeNS(null, "viewBox", "0 0 12 10");
+      this.elements.symbols.appendChild(symbol);
+    }
+    let uses = [];
+    for (let y = 0; y < definition.pixelHeight; y++) {
+      for (let x = 0; x < definition.pixelWidth; x++) {
+        if (pixels[y * definition.pixelWidth + x]) {
+          let pixel = document.createElementNS("http://www.w3.org/2000/svg", "use");
+          pixel.setAttributeNS(null, "href", "#cept-px");
+          pixel.setAttributeNS(null, "x", x);
+          pixel.setAttributeNS(null, "y", y);
+          uses.push(pixel);
+        }
+      }
+    }
+    symbol.replaceChildren(...uses);
+    // force screen update for all positions with this DRCS?
+
+    let l = `DRCS #${char}\n|`;
+    for (let y = 0; y < definition.pixelHeight; y++) {
+      for (let x = 0; x < definition.pixelWidth; x++) {
+        l += pixels[y * definition.pixelWidth + x] ? "X" : " ";
+      }
+      l += "|\n|";
+    }
+    console.log(l);
   }
 
   get bgColor() {
@@ -643,7 +735,7 @@ export default class Cept {
       if (x == 0) {
         // FIXME: use row default
       } else {
-        Object.assign(attr, this.screen.rows[y].attr[x-1]);
+        Object.assign(attr, this.screen.rows[y].attr[x - 1]);
       }
     } else {
       Object.assign(attr, this.attr);
@@ -652,8 +744,8 @@ export default class Cept {
     this.screen.rows[y].attr[x] = attr;
     // blank out other cells covered by double height/width/size char
     x += 1;
-    if (this.attr.size == Cept.SIZE_DOUBLE_WIDTH
-        || this.attr.size == Cept.SIZE_DOUBLE_SIZE)
+    if (this.attr.size == Cept.SIZE_DOUBLE_WIDTH ||
+      this.attr.size == Cept.SIZE_DOUBLE_SIZE)
       x += 1;
     if (x >= this.cols) {
       x = 0;
