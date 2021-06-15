@@ -2,6 +2,8 @@
 
 A terminal emulator compliant with ETS 300 072
 
+![](docs/welcome.png)
+
 ## Running The Local Webserver
 
 ```
