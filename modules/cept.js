@@ -548,9 +548,6 @@ export default class Cept {
 
   clearScreen() {
     this.clear(0, 0, this.cols, this.rows);
-    for (var y = 0; y < this.rows; y++) {
-      this.screen.rows[y].bg = Cept.COLOR_TRANSPARENT;
-    }
   }
 
   /**
